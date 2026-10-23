@@ -1,0 +1,6 @@
+customer_id,store,amount,category,note
+c-001,North,100.00,retail,regular sale
+c-002,North,abc,retail,invalid amount
+c-003,South,NaN,services,non-finite amount
+c-004,South,Infinity,services,non-finite amount
+c-005,South,,services,missing amount
