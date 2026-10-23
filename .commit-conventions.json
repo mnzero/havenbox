@@ -1,0 +1,6 @@
+{
+  "types": ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert"],
+  "headerMaxLength": 100,
+  "scopePattern": "[a-z0-9][a-z0-9._/-]*",
+  "ignoredHeaderPatterns": ["^Merge .+$", "^Revert \".+\"$"]
+}
