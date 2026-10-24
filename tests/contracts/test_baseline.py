@@ -1,8 +1,11 @@
 """Synthetic registries exercise contract logic, never product acceptance."""
 import copy
+import shutil
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import patch
 
 from contracts.baseline import (
     ROOT,
@@ -179,6 +182,72 @@ class BaselineTests(unittest.TestCase):
         self.manifest['contracts'][0]['sha256'] = '0' * 64
         with self.assertRaisesRegex(ContractError, 'contract drift'):
             check_inventory(self.manifest, self.matrix)
+
+    def test_source_snapshot_drift(self):
+        for field, value in [('sha256', '0' * 64), ('baseCommit', '1' * 40),
+                             ('paths', self.manifest['sourceSnapshot']['paths'][:-1])]:
+            changed = copy.deepcopy(self.manifest)
+            changed['sourceSnapshot'][field] = value
+            with self.subTest(field=field), self.assertRaisesRegex(ContractError, 'source snapshot'):
+                check_inventory(changed, self.matrix)
+
+    @contextmanager
+    def private_source(self):
+        # Copy actual checked-in inputs, not a synthetic snapshot dictionary.
+        paths = set(self.manifest['sourceSnapshot']['paths'])
+        paths.update(item['path'] for item in self.manifest['contracts'])
+        paths.update(['config/runtime-manifest.json', 'config/compatibility-matrix.json',
+                      '.github/workflows/engineering.yml'])
+        # Keep these explicit so an inventory omission cannot hide the regression.
+        paths.update(f'guest/{crate}/Cargo.toml' for crate in
+                     ('protocol', 'adapters', 'supervisor'))
+        with tempfile.TemporaryDirectory(prefix='hb09-regression-') as directory:
+            root = Path(directory).resolve()
+            for relative in paths:
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / relative, destination)
+            with patch('contracts.baseline.ROOT', root):
+                yield root
+
+    def test_actual_crate_manifest_drift(self):
+        with self.private_source() as root:
+            check_inventory(self.manifest, self.matrix)
+            for crate in ('protocol', 'adapters', 'supervisor'):
+                with self.subTest(crate=crate):
+                    path = root / f'guest/{crate}/Cargo.toml'
+                    original = path.read_bytes()
+                    self.assertIn(b'edition.workspace = true', original)
+                    try:
+                        path.write_bytes(original.replace(b'edition.workspace = true',
+                                                          b'edition = "2021"'))
+                        with self.assertRaisesRegex(ContractError, 'source snapshot content drift'):
+                            check_inventory(self.manifest, self.matrix)
+                    finally:
+                        path.write_bytes(original)
+                    check_inventory(self.manifest, self.matrix)
+
+    def test_actual_ci_checkout_policy(self):
+        with self.private_source() as root:
+            path = root / '.github/workflows/engineering.yml'
+            original = path.read_text()
+            check_inventory(self.manifest, self.matrix)
+            mutations = [
+                ('ref: ${{ github.sha }}', f'ref: {self.manifest["sourceCommit"]}'),
+                ('ref: ${{ github.sha }}', 'ref: 11bd71901bbe5b1630ceea73d27597364c9af683'),
+                ('actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683',
+                 'actions/checkout@v4'),
+            ]
+            for before, after in mutations:
+                with self.subTest(replacement=after):
+                    self.assertIn(before, original)
+                    try:
+                        path.write_text(original.replace(before, after))
+                        with self.assertRaisesRegex(ContractError, 'CI checkout policy'):
+                            check_inventory(self.manifest, self.matrix)
+                    finally:
+                        path.write_text(original)
+                    check_inventory(self.manifest, self.matrix)
 
     def test_trusted_evidence_and_version_drift(self):
         # Entirely fabricated fixtures, never persisted to the product matrix.

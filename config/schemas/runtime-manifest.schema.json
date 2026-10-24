@@ -22,6 +22,30 @@
       "type": "string",
       "minLength": 1
     },
+    "sourceSnapshot": {
+      "type": "object",
+      "properties": {
+        "baseCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": ["baseCommit", "sha256", "paths"],
+      "additionalProperties": false
+    },
     "platform": {
       "type": "object",
       "properties": {
@@ -500,6 +524,7 @@
     "revision",
     "state",
     "sourceCommit",
+    "sourceSnapshot",
     "platform",
     "distribution",
     "sqlite",

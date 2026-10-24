@@ -1,8 +1,8 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb08-candidate-2",
+  "revision": "hb09-candidate-2",
   "state": "candidate",
-  "sourceCommit": "71b07652f6405e35bc4e50a1c75bfb5b58400922",
+  "sourceCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
   "platform": {
     "os": "macOS",
     "architecture": "arm64",
@@ -83,23 +83,23 @@
   "dependencies": [
     {
       "id": "swift-toolchain",
-      "version": null,
+      "version": "6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)",
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
+      "source": "Measured installed engineering toolchain; config/build-toolchain.json; not redistribution approval",
+      "status": "probe",
+      "evidence": "doc/verification/HB-09.md"
     },
     {
       "id": "rust-toolchain",
-      "version": null,
+      "version": "1.99.1 (58cf8f9c3 2026-10-13) Homebrew",
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
+      "source": "Measured installed engineering toolchain; config/build-toolchain.json; not redistribution approval",
+      "status": "probe",
+      "evidence": "doc/verification/HB-09.md"
     },
     {
       "id": "qemu",
@@ -391,7 +391,7 @@
     {
       "id": "config/schemas/runtime-manifest.schema.json",
       "path": "config/schemas/runtime-manifest.schema.json",
-      "sha256": "fefe9433298f199a941eb778e3655abd2537b4693e34f421eed6d9666ef37711"
+      "sha256": "6eb9e7060ad5039dda9f31f1ef0e17cf879383db96db5c29f24ce07465a81053"
     },
     {
       "id": "config/schemas/validation-request.schema.json",
@@ -411,22 +411,72 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "fb854a016d7f368a836b78e98bc195709845fba5abe1d5f83dd24eda35321d15"
+      "sha256": "10a259c697976cba8db8b82c6d8c83e2c0b59c4ed34b1f13fd4ad6d5615e7f7d"
     },
     {
       "id": "contracts/protocol.md",
       "path": "contracts/protocol.md",
-      "sha256": "fdfa724494b992ea385148cd09d8b9039bcf46ef4d76937bc0e31d74bea2f1ff"
+      "sha256": "81faf7d112a216ff4b6e3e3830c076b6acd721d3c5130be5172d3d9bb9ee2693"
     },
     {
       "id": "tests/contracts/test_baseline.py",
       "path": "tests/contracts/test_baseline.py",
-      "sha256": "4b21878d0c67a1eb31d037b051ef39261cd7d1e91be1dcff491b39d7fda849df"
+      "sha256": "582a89c0b6b2b13200240a8293c6c65eef22175a48b1756ff72a327867e39aeb"
     },
     {
       "id": "scripts/check-baseline.py",
       "path": "scripts/check-baseline.py",
       "sha256": "5b2005ff228bbd8bd544a5c41b2012f390a9b26f269fb07d9a6c751ea6c24cea"
+    },
+    {
+      "id": "config/build-toolchain.json",
+      "path": "config/build-toolchain.json",
+      "sha256": "4738ec634a00f4c47c02a5d7cc04dde2437d06b02a7dd3edfce0dd289bb2f408"
+    },
+    {
+      "id": "contracts/header-vectors.tsv",
+      "path": "contracts/header-vectors.tsv",
+      "sha256": "5642e753abbc8fb0ab7359cd5d9f84b54266dea7e1c9143741b76017b5d3b15a"
+    },
+    {
+      "id": "Package.swift",
+      "path": "Package.swift",
+      "sha256": "09224e37b5d2ccbf8f62d3784172f71320503fa3af09091f7114e5fefff1b520"
+    },
+    {
+      "id": "guest/Cargo.lock",
+      "path": "guest/Cargo.lock",
+      "sha256": "09e769937bd1923481b16097e5da6299c7eb9f388733034888b7aca6c3aa3522"
+    },
+    {
+      "id": "scripts/engineering.py",
+      "path": "scripts/engineering.py",
+      "sha256": "64b9d5dd55106fd7cc6e3d2fffd26b04ab6fae65a0ef644e9485f279b3a1aefd"
+    },
+    {
+      "id": "Sources/HavenboxCore/ProtocolHeader.swift",
+      "path": "Sources/HavenboxCore/ProtocolHeader.swift",
+      "sha256": "beca9fca03243896cbaa2ba2d89b872a9ae9ee7568682bf359eb1056d0235913"
+    },
+    {
+      "id": "Sources/HavenboxCore/WireID.swift",
+      "path": "Sources/HavenboxCore/WireID.swift",
+      "sha256": "8069462060fab61bf700622de2c7a26631ae7a502f65458c2088534259d43e7c"
+    },
+    {
+      "id": "guest/protocol/src/lib.rs",
+      "path": "guest/protocol/src/lib.rs",
+      "sha256": "4f301f0001d5c8fd2e6f28012aa28d1105782ae184d3faddc4c860eeaef44727"
+    },
+    {
+      "id": "tests/HavenboxCoreTests/ProtocolTests.swift",
+      "path": "tests/HavenboxCoreTests/ProtocolTests.swift",
+      "sha256": "708d687b1513cbccc9ddb1d1abe1faadacbd739ae3ac04827a31998b73b3ec47"
+    },
+    {
+      "id": "tests/generate-header-vectors.py",
+      "path": "tests/generate-header-vectors.py",
+      "sha256": "9a4d940efdb9c4eb2da80d6f22cd216bae3edc42d0957c943326676d4bf31086"
     }
   ],
   "unresolved": [
@@ -437,5 +487,29 @@
     "HB07 real model/GPU/offline combination missing",
     "Exact build hashes, licenses, SBOM and SQLite WAL fix evidence missing",
     "HB31 functional / HB32 security / HB33 release qualification pending"
-  ]
+  ],
+  "sourceSnapshot": {
+    "baseCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
+    "sha256": "0dac46e7d1159529a18b887c673ceeb86a4843497b8a23f51677cab4490168f7",
+    "paths": [
+      "Package.swift",
+      "Sources/HavenboxApp/HavenboxApp.swift",
+      "Sources/HavenboxCore/ProtocolHeader.swift",
+      "Sources/HavenboxCore/WireID.swift",
+      "Sources/HavenboxHelper/main.swift",
+      "config/build-toolchain.json",
+      "contracts/header-vectors.tsv",
+      "guest/Cargo.lock",
+      "guest/Cargo.toml",
+      "guest/adapters/Cargo.toml",
+      "guest/adapters/src/lib.rs",
+      "guest/protocol/Cargo.toml",
+      "guest/protocol/src/lib.rs",
+      "guest/supervisor/Cargo.toml",
+      "guest/supervisor/src/main.rs",
+      "scripts/engineering.py",
+      "tests/HavenboxCoreTests/ProtocolTests.swift",
+      "tests/generate-header-vectors.py"
+    ]
+  }
 }

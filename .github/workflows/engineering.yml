@@ -1,0 +1,32 @@
+name: HB-09 candidate engineering
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-engineering:
+    # Dedicated pre-provisioned runner; never silently replace missing compiler/SDK.
+    runs-on: [self-hosted, macOS, ARM64, hb09-toolchain-1]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Build the exact event commit; this is distinct from pinning the checkout action itself.
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Compile and run offline checks with exact toolchain gate
+        run: python3 scripts/engineering.py check
+      - name: Assemble engineering-only package (fresh destination required)
+        run: python3 scripts/engineering.py package
+  reference-mac-integration:
+    # Deliberately non-passing until HB-11/31/32 provide REAL VM/network/GPU checks.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, macOS, ARM64, havenbox-reference-mac]
+    timeout-minutes: 5
+    steps:
+      - name: Real integration acceptance not implemented
+        run: |
+          echo 'BLOCKED: real VM/no-NIC, network authorization, GPU/offline and process cleanup acceptance required; no mock pass.' >&2
+          exit 78

@@ -13,6 +13,27 @@
 - [技术方案对照评审](doc/technical-review.md)
 - [开发任务与验收计划](doc/development-tasks.md)
 
+## HB-09 候选开发工程
+
+已提供 SwiftUI 信息窗口、Swift 核心/header 预检与 helper 可执行体、Rust guest workspace（protocol/supervisor/adapters）。**不是可执行产品**：无 VM、推理、存储或文件处理，helper/supervisor 仅 `--version` 成功，其余参数明确退出 78；不签发 ValidationRunGrant，也不授予普通组合运行资格。
+
+### 固定构建环境与命令
+
+Apple Silicon macOS；预先准备 `config/build-toolchain.json` 的精确工具链：Apple Swift 6.3.3 (swiftlang-6.3.3.1.3)、Rust/Cargo 1.99.1 Homebrew 构建、Python 3.15.0、macOS SDK 26.5。构建脚本校验版本，缺失/不匹配直接失败，**不安装、不升级、不下载**。SDK 默认 `/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`；可通过 `SDKROOT` 指定同版本目录，通过 `HB_SWIFTC` 指定同版本编译器。macOS 14 仅部署目标，未验最低系统。
+
+```sh
+python3 scripts/engineering.py build    # 实编 Swift app/core/helper/测试体，Rust host-native release
+python3 scripts/engineering.py check    # build + Swift可执行单测 + Cargo单测 + 契约/计划/CSV检查
+python3 scripts/engineering.py package  # check + 全新 dist/Havenbox-engineering 开发目录
+open dist/Havenbox-engineering/Havenbox.app  # 仅候选信息窗口，非产品功能验收
+```
+
+包目录已存在时拒绝覆盖；请先自行归档旧产物。Swift 产物位于 `.build/engineering/`，Rust 位于 `guest/target/release/`；内部开发包有文件 SHA-256 清单，不含 VM/模型/harness 或 Linux 镜像，不是可分发产品/SBOM 审批证明。Rust 本机编译目标为 `aarch64-apple-darwin`，**不是 Linux guest 构建通过**。
+
+本机 CLT 的 `swift test` 在 SwiftPM 启动期缺符号退出 134，且无 XCTest；实际入口使用 `swiftc` 与标准库可执行回归，不宣称 XCTest/SwiftPM 通过。`Package.swift` 是健康 SwiftPM 环境的备用描述，尚未验证；无外部 Swift 依赖所以不伪造 `Package.resolved`。Rust 三个本地 crate 由 `guest/Cargo.lock` 锁定，`--locked --offline` 构建。
+
+CI 使用固定 SHA 的 checkout action，并显式 checkout 事件 SHA（`github.sha`）构建当前事件提交；专用预配置 runner `hb09-toolchain-1` 执行同一入口和版本门禁，未提供该 runner 时会排队而非降级到未知工具链。源码起点与未提交快照绑定记录在 runtime manifest：起点是 `bd98c68c07e8be387cc81c1d1a843d3400554140`，快照摘要覆盖实际工程源码、工具链与构建入口，排除生成物和自引用字段；它不是未来提交 hash，也不表示源码已提交。真实 VM/网络/GPU 检查是单独参考 Mac 集成任务，当前显式退出 78，不以 mock 通过。详见 [HB-09 实测与边界](doc/verification/HB-09.md)。
+
 ## HB-08 候选契约检查
 
 ```sh

@@ -12,6 +12,28 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SNAPSHOT_PATHS = (
+    'Package.swift', 'config/build-toolchain.json', 'scripts/engineering.py',
+    'Sources', 'guest/Cargo.toml', 'guest/Cargo.lock',
+    'guest/protocol/Cargo.toml', 'guest/adapters/Cargo.toml', 'guest/supervisor/Cargo.toml',
+    'guest/protocol/src', 'guest/supervisor/src', 'guest/adapters/src', 'tests/HavenboxCoreTests',
+    'tests/generate-header-vectors.py', 'contracts/header-vectors.tsv',
+)
+
+
+def source_snapshot():
+    """Hash the candidate engineering inputs, excluding generated/self-referential files."""
+    paths = []
+    for entry in SNAPSHOT_PATHS:
+        path = ROOT / entry
+        candidates = sorted(path.rglob('*')) if path.is_dir() else [path]
+        paths.extend(p for p in candidates if p.is_file())
+    paths = sorted(set(paths))
+    relative = [str(path.relative_to(ROOT)) for path in paths]
+    payload = b''.join(
+        relative_path.encode() + b'\0' + path.read_bytes() + b'\0'
+        for relative_path, path in zip(relative, paths, strict=True))
+    return relative, hashlib.sha256(payload).hexdigest()
 
 
 class ContractError(ValueError):
@@ -131,16 +153,52 @@ def binding(manifest, combination):
         key: value for key, value in combination.items() if key not in ("state", "evidence")}})
 
 
+def check_engineering_ci():
+    """Guard only the current engineering workflow's literal checkout step.
+
+    This is deliberately not a YAML interpreter: changes to this step's shape
+    require policy review. The action implementation is pinned; repository input
+    must remain the event commit, never that action SHA or an old source commit.
+    """
+    lines = [line.split('#', 1)[0].rstrip() for line in
+             (ROOT / '.github/workflows/engineering.yml').read_text().splitlines()]
+    lines = [line for line in lines if line.strip()]
+    starts = [i for i, line in enumerate(lines) if 'actions/checkout' in line]
+    require(len(starts) == 1, 'CI checkout policy: expected one literal checkout step')
+    start = starts[0]
+    end = next((i for i in range(start + 1, len(lines))
+                if lines[i].startswith('      - ')), len(lines))
+    require(lines[start:end] == [
+        '      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683',
+        '        with:',
+        '          ref: ${{ github.sha }}',
+        '          persist-credentials: false',
+    ], 'CI checkout policy: pin action SHA but checkout repository at github.sha')
+
+
 def check_inventory(manifest, matrix):
+    check_engineering_ci()
     check_schema(manifest, "runtime-manifest")
     check_schema(matrix, "compatibility-matrix")
+    snapshot_paths, snapshot_digest = source_snapshot()
+    require(manifest["sourceSnapshot"]["baseCommit"] == manifest["sourceCommit"],
+            "source snapshot base commit differs from sourceCommit")
+    require(manifest["sourceSnapshot"]["paths"] == snapshot_paths,
+            "source snapshot path list drift")
+    require(manifest["sourceSnapshot"]["sha256"] == snapshot_digest,
+            "source snapshot content drift")
     for field in ("dependencies", "contracts"):
         ids = [item["id"] for item in manifest[field]]
         require(len(ids) == len(set(ids)), f"duplicate {field} id")
     required_paths = {str(p.relative_to(ROOT)) for p in (ROOT / "config/schemas").glob("*.json")}
     required_paths.update({"config/inference-parameters.json", "contracts/baseline.py",
                            "contracts/protocol.md", "tests/contracts/test_baseline.py",
-                           "scripts/check-baseline.py"})
+                           "scripts/check-baseline.py",
+                           "config/build-toolchain.json", "contracts/header-vectors.tsv",
+                           "Package.swift", "guest/Cargo.lock", "scripts/engineering.py",
+                           "Sources/HavenboxCore/ProtocolHeader.swift", "Sources/HavenboxCore/WireID.swift",
+                           "guest/protocol/src/lib.rs", "tests/HavenboxCoreTests/ProtocolTests.swift",
+                           "tests/generate-header-vectors.py"})
     require({item["path"] for item in manifest["contracts"]} == required_paths,
             "incomplete contract inventory")
     required_dependencies = {

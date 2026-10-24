@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    - hb09-toolchain-1
+    - havenbox-reference-mac

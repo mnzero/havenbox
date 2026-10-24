@@ -22,11 +22,11 @@
 | file | 每块 256 KiB（含 JSON 编码后字节） | ReadArtifact / FileChunk | FileChunk，仅响应宿主已登记请求 |
 | inference | 4 MiB | InferenceResponse / Cancel | InferenceRequest，仅固定路由引用 |
 
-未知版本、方向、类型、跨 epoch、重复/未知 request ID、过长和坏哈希一律拒绝，不能把未知事件映射成功。停止通道独立队列和保留容量；不与文件传输争同一个阻塞读取。宿主 socket 目录 0700，QMP 不开放给来宾。FileChunk 不含宿主路径；导出必须关联宿主先登记的 ReadArtifact。HB-08 仅定义帧和 DTO，没有实现字节流解码器。
+未知版本、方向、类型、跨 epoch、重复/未知 request ID、过长和坏哈希一律拒绝，不能把未知事件映射成功。停止通道独立队列和保留容量；不与文件传输争同一个阻塞读取。宿主 socket 目录 0700，QMP 不开放给来宾。FileChunk 不含宿主路径；导出必须关联宿主先登记的 ReadArtifact。HB-08 仅定义帧和 DTO。HB-09 在 Swift/Rust 实现共享 golden vectors 驱动的固定 68-byte header 预检，拒绝未知版本、通道、flags、epoch 和过长载荷；这不是字节流解码器，尚不校验 payload 哈希/JSON、方向、request 注册或握手，不可据其接受载荷执行。
 
 ## 领域边界
 
-SessionId、TurnId、TaskId、CallId、FileVersionId 采用带前缀字符串的独立 wire 类型；Swift/Rust 包装类型由 HB-09 生成/实现，不能混用。SessionBinding = Agent(recipeRevision) | ToolsOnly(toolPolicyRevision)。Turn 与 ExecutionTask 分开；首次披露只需 turn，批准计划之后才创建 task。ModelRoute 为互斥 Local/Online，真实凭据永不在 DTO 中。
+SessionId、TurnId、TaskId、CallId、FileVersionId 采用带前缀字符串的独立 wire 类型；Swift/Rust 包装类型已由 HB-09 实现前缀与 ASCII 后缀校验，各种 ID 不能混用；尚未实现领域 DTO 序列化。SessionBinding = Agent(recipeRevision) | ToolsOnly(toolPolicyRevision)。Turn 与 ExecutionTask 分开；首次披露只需 turn，批准计划之后才创建 task。ModelRoute 为互斥 Local/Online，真实凭据永不在 DTO 中。
 
 `CallPermit` 必须宿主批准且绑定 call/task/plan/arguments/step/epoch/期限；重复 call ID 只读核查记录，不重做写操作。模型/工具仅返回建议，`ToolSuggestion` 永不等于许可。ArtifactVersion 绑定内容 hash、provenance 与 completeness，成功退出码不代表成果完整。
 

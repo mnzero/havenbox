@@ -4,3 +4,10 @@ experiments/vm/state/
 experiments/vm/tools/
 experiments/vm/__pycache__/
 !experiments/vm/assets/guest-payload.sh
+.build/
+.build-tools/
+.swiftpm/
+guest/target/
+dist/
+__pycache__/
+*.pyc
