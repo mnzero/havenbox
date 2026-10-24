@@ -1,6 +1,6 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb10-candidate-1",
+  "revision": "hb11-candidate-1",
   "state": "candidate",
   "sourceCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
   "platform": {
@@ -411,7 +411,7 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "460001bdafb7f0e693993ee20141358c2d433a6dfb5d43db0c4d47e2ee9e2eb0"
+      "sha256": "6ae44792f22880e4352544b7461941688b194003862661eda023082c0a88ddb6"
     },
     {
       "id": "contracts/protocol.md",
@@ -421,7 +421,7 @@
     {
       "id": "tests/contracts/test_baseline.py",
       "path": "tests/contracts/test_baseline.py",
-      "sha256": "582a89c0b6b2b13200240a8293c6c65eef22175a48b1756ff72a327867e39aeb"
+      "sha256": "9e6294153d98f8c8d7be49720bde0c9132786b5ab69be79d09471f9edecbcf9d"
     },
     {
       "id": "scripts/check-baseline.py",
@@ -451,7 +451,7 @@
     {
       "id": "scripts/engineering.py",
       "path": "scripts/engineering.py",
-      "sha256": "88c5d560b7c3c75518a8e2da0d919e7fc5361b76c5d933215257feecb7796b2d"
+      "sha256": "1d23eb13c41377651ba55c433e43b2294ca3d872e42fa0300bfbb725239252a9"
     },
     {
       "id": "Sources/HavenboxCore/ProtocolHeader.swift",
@@ -490,7 +490,7 @@
   ],
   "sourceSnapshot": {
     "baseCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
-    "sha256": "71a212ee1f70fa7ad0cedc119534e0fdafda63a610657c769a385b142f85de25",
+    "sha256": "1c8195246f0e4bf39a422389c6a85826408401e1a085b856cd2f22dce4c893e2",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",
@@ -499,6 +499,8 @@
       "Sources/CSQLite/sqlite3.c",
       "Sources/HavenboxApp/HavenboxApp.swift",
       "Sources/HavenboxCore/ProtocolHeader.swift",
+      "Sources/HavenboxCore/RuntimeManager.swift",
+      "Sources/HavenboxCore/RuntimeWatchdog.swift",
       "Sources/HavenboxCore/WireID.swift",
       "Sources/HavenboxCore/WorkspaceDatabase.swift",
       "Sources/HavenboxCore/WorkspaceSchema.swift",
@@ -514,9 +516,12 @@
       "guest/protocol/Cargo.toml",
       "guest/protocol/src/lib.rs",
       "guest/supervisor/Cargo.toml",
+      "guest/supervisor/src/lib.rs",
       "guest/supervisor/src/main.rs",
+      "guest/supervisor/src/sandbox.rs",
       "scripts/engineering.py",
       "tests/HavenboxCoreTests/ProtocolTests.swift",
+      "tests/RuntimeTests/RuntimeTests.swift",
       "tests/WorkspaceStoreTests/StorageTests.swift",
       "tests/generate-header-vectors.py"
     ]

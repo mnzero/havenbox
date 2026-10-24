@@ -199,6 +199,7 @@ class BaselineTests(unittest.TestCase):
         paths.update(['config/runtime-manifest.json', 'config/compatibility-matrix.json',
                       '.github/workflows/engineering.yml'])
         # Keep these explicit so an inventory omission cannot hide the regression.
+        paths.add('tests/RuntimeTests/RuntimeTests.swift')
         paths.update(f'guest/{crate}/Cargo.toml' for crate in
                      ('protocol', 'adapters', 'supervisor'))
         with tempfile.TemporaryDirectory(prefix='hb09-regression-') as directory:
@@ -226,6 +227,21 @@ class BaselineTests(unittest.TestCase):
                     finally:
                         path.write_bytes(original)
                     check_inventory(self.manifest, self.matrix)
+
+    def test_actual_runtime_test_drift(self):
+        relative = 'tests/RuntimeTests/RuntimeTests.swift'
+        self.assertIn(relative, self.manifest['sourceSnapshot']['paths'])
+        with self.private_source() as root:
+            check_inventory(self.manifest, self.matrix)
+            path = root / relative
+            original = path.read_bytes()
+            try:
+                path.write_bytes(original + b'\n// HB-11 actual test drift regression\n')
+                with self.assertRaisesRegex(ContractError, 'source snapshot content drift'):
+                    check_inventory(self.manifest, self.matrix)
+            finally:
+                path.write_bytes(original)
+            check_inventory(self.manifest, self.matrix)
 
     def test_actual_ci_checkout_policy(self):
         with self.private_source() as root:

@@ -34,6 +34,12 @@ open dist/Havenbox-engineering/Havenbox.app  # 仅候选信息窗口，非产品
 
 CI 使用固定 SHA 的 checkout action，并显式 checkout 事件 SHA（`github.sha`）构建当前事件提交；专用预配置 runner `hb09-toolchain-1` 执行同一入口和版本门禁，未提供该 runner 时会排队而非降级到未知工具链。源码起点与未提交快照绑定记录在 runtime manifest：起点是 `bd98c68c07e8be387cc81c1d1a843d3400554140`，快照摘要覆盖实际工程源码、工具链与构建入口，排除生成物和自引用字段；它不是未来提交 hash，也不表示源码已提交。真实 VM/网络/GPU 检查是单独参考 Mac 集成任务，当前显式退出 78，不以 mock 通过。详见 [HB-09 实测与边界](doc/verification/HB-09.md)。
 
+### HB-11 inspect-boot 候选检查
+
+`guest/target/release/hb-supervisor --inspect-boot` 只读取启动拓扑，不启动任务；非 Linux 明确返回 78。Linux 候选 parser 要求完整的 `/`、`/data`、`/proc`、`/sys`、`/dev`、`/dev/pts`、`/sys/fs/cgroup`、`/tmp` 固定挂载集合，具体文件系统/选项见 `BOOT_MOUNTS`；拒绝任何额外挂载（包括 `/context` tmpfs 和 `/share` fuse.sshfs）、subtree root、重复覆盖、错误父节点、未知格式/传播字段及 major/minor 漂移。网络清单只能是 `lo`，完整 block 清单只能是 `vda=254:0`、`vdb=254:16`（多余未挂载盘/分区也拒绝）。这是待正式镜像验证的保守候选 profile，不是已验证 Linux 拓扑或完整硬件设备认证，不能据此授予执行资格。
+
+本轮 `hb11-candidate-1` 将 RuntimeTests 纳入内容绑定；旧候选证据不能沿用。正式 launchd/timer/transport/cgroup admission/超限 kill 尚未接通，普通资格和 ValidationRunGrant 保持关闭，详见 [HB-11 修复与阻塞记录](doc/verification/HB-11.md)。
+
 ## HB-08 候选契约检查
 
 ```sh
