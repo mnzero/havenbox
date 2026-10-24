@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "hb.compatibility.v1",
+  "combinations": [
+    {
+      "id": "kimi-cli-network-csv",
+      "harness": "kimi-cli",
+      "adapterRevision": null,
+      "toolPolicyRevision": "csv-approved-only-v1-candidate",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "route": {
+        "mode": "online",
+        "providerRevision": null,
+        "credentialVersion": null,
+        "protocol": null,
+        "modelId": null,
+        "endpointRevision": null,
+        "resourceRevision": null,
+        "runtimeRevision": null,
+        "templateDigest": null,
+        "quantization": null
+      },
+      "state": "candidate",
+      "recovery": "preview-summary-new-session-no-replay",
+      "reason": "No complete functional/security evidence; never user-enabled",
+      "evidence": {
+        "functional": null,
+        "security": null,
+        "release": null
+      }
+    },
+    {
+      "id": "pi-network-csv",
+      "harness": "pi",
+      "adapterRevision": null,
+      "toolPolicyRevision": "csv-approved-only-v1-candidate",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "route": {
+        "mode": "online",
+        "providerRevision": null,
+        "credentialVersion": null,
+        "protocol": null,
+        "modelId": null,
+        "endpointRevision": null,
+        "resourceRevision": null,
+        "runtimeRevision": null,
+        "templateDigest": null,
+        "quantization": null
+      },
+      "state": "candidate",
+      "recovery": "preview-summary-new-session-no-replay",
+      "reason": "No complete functional/security evidence; never user-enabled",
+      "evidence": {
+        "functional": null,
+        "security": null,
+        "release": null
+      }
+    },
+    {
+      "id": "dsh-network-csv",
+      "harness": "dsh",
+      "adapterRevision": null,
+      "toolPolicyRevision": "csv-approved-only-v1-candidate",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "route": {
+        "mode": "online",
+        "providerRevision": null,
+        "credentialVersion": null,
+        "protocol": null,
+        "modelId": null,
+        "endpointRevision": null,
+        "resourceRevision": null,
+        "runtimeRevision": null,
+        "templateDigest": null,
+        "quantization": null
+      },
+      "state": "candidate",
+      "recovery": "preview-summary-new-session-no-replay",
+      "reason": "No complete functional/security evidence; never user-enabled",
+      "evidence": {
+        "functional": null,
+        "security": null,
+        "release": null
+      }
+    },
+    {
+      "id": "candidate-local-csv",
+      "harness": "pending",
+      "adapterRevision": null,
+      "toolPolicyRevision": "csv-approved-only-v1-candidate",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "route": {
+        "mode": "local",
+        "providerRevision": null,
+        "credentialVersion": null,
+        "protocol": null,
+        "modelId": null,
+        "endpointRevision": null,
+        "resourceRevision": null,
+        "runtimeRevision": null,
+        "templateDigest": null,
+        "quantization": null
+      },
+      "state": "candidate",
+      "recovery": "preview-summary-new-session-no-replay",
+      "reason": "No complete functional/security evidence; never user-enabled",
+      "evidence": {
+        "functional": null,
+        "security": null,
+        "release": null
+      }
+    }
+  ]
+}

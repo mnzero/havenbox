@@ -1,0 +1,441 @@
+{
+  "schemaVersion": "hb.runtime.v1",
+  "revision": "hb08-candidate-2",
+  "state": "candidate",
+  "sourceCommit": "71b07652f6405e35bc4e50a1c75bfb5b58400922",
+  "platform": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "minimumOSCandidate": "14.0",
+    "minimumOSVerified": false,
+    "referenceMemoryGiB": 16,
+    "referenceHardware": null
+  },
+  "distribution": {
+    "kind": "internal-package",
+    "hvfEntitlement": "com.apple.security.hypervisor",
+    "signing": "preserve-runtime-entitlement-or-reviewed-adhoc",
+    "notarization": false,
+    "automaticUpdates": false
+  },
+  "sqlite": {
+    "version": null,
+    "requiredFix": "WAL-reset",
+    "upstreamReference": "https://sqlite.org/releaselog/3_51_3.html",
+    "acceptance": "exact-build-with-official-fix-evidence-and-WAL-regression",
+    "journalMode": "WAL",
+    "synchronous": "FULL",
+    "foreignKeys": true,
+    "backup": "sqlite-backup-api"
+  },
+  "runtime": {
+    "accelerator": "hvf",
+    "machine": "virt",
+    "networkDevices": 0,
+    "sharedDirectories": 0,
+    "fallback": "none",
+    "protocolVersion": "hb.channel.v1",
+    "databaseSchema": "hb.store.v1-candidate"
+  },
+  "csv": {
+    "version": "hb.csv-policy.v1",
+    "moneyScale": 2,
+    "maxIntegerDigits": 16,
+    "numberPattern": "-?(0|[1-9][0-9]{0,15})(\\.[0-9]{1,2})?",
+    "rounding": "reject",
+    "overflow": "reject-before-publish",
+    "comparison": "exact-utf8-no-trim-no-casefold",
+    "order": "input-order-stable",
+    "duplicateModes": [
+      "all_members",
+      "after_first"
+    ]
+  },
+  "limits": {
+    "csvFiles": 20,
+    "csvFileBytes": 52428800,
+    "csvTotalBytes": 209715200,
+    "cellBytes": 1048576,
+    "columns": 256,
+    "previewRows": 200,
+    "previewBytes": 2097152,
+    "vmCPUs": 2,
+    "vmMemoryBytes": 4294967296,
+    "vmDiskBytes": 21474836480,
+    "toolSteps": 20,
+    "taskSeconds": 600,
+    "toolSeconds": 60,
+    "stdoutBytes": 1048576,
+    "stderrBytes": 1048576,
+    "contextTokens": 8192,
+    "outputTokens": 2048,
+    "requestBytes": 4194304,
+    "requestsPerTurn": 12,
+    "requestSeconds": 120,
+    "concurrentRequests": 1,
+    "stopGraceSeconds": 3,
+    "cleanupFailureSeconds": 10,
+    "workerMemoryBytes": 536870912,
+    "workerScratchBytes": 2147483648,
+    "aggregateGroups": 100000
+  },
+  "recovery": "preview-summary-new-session-no-replay",
+  "dependencies": [
+    {
+      "id": "swift-toolchain",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "rust-toolchain",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "qemu",
+      "version": "10.0.12",
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "HB-02 UTM 5.0.8 framework; package binary hash/license review still pending",
+      "status": "probe",
+      "evidence": "doc/verification/HB-02.md"
+    },
+    {
+      "id": "qemu-img",
+      "version": "10.0.12",
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "HB-02 UTM 5.0.8 framework; package binary hash/license review still pending",
+      "status": "probe",
+      "evidence": "doc/verification/HB-02.md"
+    },
+    {
+      "id": "linux-kernel",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "guest-image",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "node-runtime",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "python-runtime",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "kimi-cli",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "pi",
+      "version": "1.3.0",
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "HB-05 host RPC only; not guest package",
+      "status": "probe",
+      "evidence": "doc/verification/HB-05.md"
+    },
+    {
+      "id": "dsh",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "builtin-adapter",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "kimi-adapter",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "pi-adapter",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "dsh-adapter",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "harness-patches",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "llama-runtime",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "local-model",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "model-template",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "mcp-protocol",
+      "version": "2025-06-18",
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "https://modelcontextprotocol.io/specification/2025-06-18",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "mcp-sdk",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "mcp-server",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "csv-engine",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "cli",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "sqlite",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "watchdog",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "supervisor",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "gateway",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    },
+    {
+      "id": "check-suite",
+      "version": null,
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "status": "pending",
+      "evidence": null
+    }
+  ],
+  "contracts": [
+    {
+      "id": "config/schemas/compatibility-matrix.schema.json",
+      "path": "config/schemas/compatibility-matrix.schema.json",
+      "sha256": "d20642780420ce9cb23f81de0e0da4c266834bd99a7f5e02cb4b77d4736c400f"
+    },
+    {
+      "id": "config/schemas/domain.schema.json",
+      "path": "config/schemas/domain.schema.json",
+      "sha256": "f3fab9180904c0ef43c3e4165cbf0a74975b20c1861634852b846dfef653942f"
+    },
+    {
+      "id": "config/schemas/inference-parameter.schema.json",
+      "path": "config/schemas/inference-parameter.schema.json",
+      "sha256": "7525751e868a06e9a0de64d85975cc30623ca514e3dd26e994fa81652c081cdd"
+    },
+    {
+      "id": "config/schemas/runtime-manifest.schema.json",
+      "path": "config/schemas/runtime-manifest.schema.json",
+      "sha256": "fefe9433298f199a941eb778e3655abd2537b4693e34f421eed6d9666ef37711"
+    },
+    {
+      "id": "config/schemas/validation-request.schema.json",
+      "path": "config/schemas/validation-request.schema.json",
+      "sha256": "ff1a8974773dde1d7e191a5bc642cd5c1e1ebbe33c33eeb30004c5248fd7a1b9"
+    },
+    {
+      "id": "config/schemas/validation-run-grant.schema.json",
+      "path": "config/schemas/validation-run-grant.schema.json",
+      "sha256": "3a507b95e2593ae6a7ab4854da93a13734c50a29969edb75ee16111f23008da1"
+    },
+    {
+      "id": "config/inference-parameters.json",
+      "path": "config/inference-parameters.json",
+      "sha256": "39bc3b0b4a6e35433cc78b10fe76af8a5c14495b474018d9ab5111ab7b0671b9"
+    },
+    {
+      "id": "contracts/baseline.py",
+      "path": "contracts/baseline.py",
+      "sha256": "fb854a016d7f368a836b78e98bc195709845fba5abe1d5f83dd24eda35321d15"
+    },
+    {
+      "id": "contracts/protocol.md",
+      "path": "contracts/protocol.md",
+      "sha256": "fdfa724494b992ea385148cd09d8b9039bcf46ef4d76937bc0e31d74bea2f1ff"
+    },
+    {
+      "id": "tests/contracts/test_baseline.py",
+      "path": "tests/contracts/test_baseline.py",
+      "sha256": "4b21878d0c67a1eb31d037b051ef39261cd7d1e91be1dcff491b39d7fda849df"
+    },
+    {
+      "id": "scripts/check-baseline.py",
+      "path": "scripts/check-baseline.py",
+      "sha256": "5b2005ff228bbd8bd544a5c41b2012f390a9b26f269fb07d9a6c751ea6c24cea"
+    }
+  ],
+  "unresolved": [
+    "Minimum macOS and 16GiB reference not measured",
+    "HB03 real QEMU/model lifecycle pending",
+    "HB04/HB06 real guest protocol and patches pending",
+    "HB05 guest isolation/context/bridge/recovery pending",
+    "HB07 real model/GPU/offline combination missing",
+    "Exact build hashes, licenses, SBOM and SQLite WAL fix evidence missing",
+    "HB31 functional / HB32 security / HB33 release qualification pending"
+  ]
+}

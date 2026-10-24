@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:havenbox:inference-parameter:v1",
+  "$defs": {
+    "tokenRule": {
+      "type": "object",
+      "properties": {
+        "supported": {"const": true},
+        "default": {"type": "integer", "minimum": 1},
+        "valueSchema": {
+          "type": "object",
+          "properties": {
+            "type": {"const": "integer"},
+            "minimum": {"type": "integer", "minimum": 1},
+            "maximum": {"type": "integer", "minimum": 1}
+          },
+          "required": ["type", "minimum", "maximum"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["supported", "default", "valueSchema"],
+      "additionalProperties": false
+    },
+    "optionalRule": {
+      "type": "object",
+      "properties": {
+        "supported": {"type": "boolean"},
+        "default": {
+          "oneOf": [{"type": "number"}, {"type": "string", "minLength": 1}]
+        },
+        "valueSchema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {"const": "integer"},
+                "minimum": {"type": "integer", "minimum": 0},
+                "maximum": {"type": "integer", "minimum": 1}
+              },
+              "required": ["type", "minimum", "maximum"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {"const": "number"},
+                "minimum": {"type": "number"},
+                "maximum": {"type": "number"}
+              },
+              "required": ["type", "minimum", "maximum"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "enum": {
+                  "type": "array",
+                  "items": {"type": "string", "minLength": 1},
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              },
+              "required": ["enum"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["supported", "default", "valueSchema"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "schemaVersion": {"const": "hb.inference-parameters.v1"},
+    "revision": {"type": "string", "minLength": 1},
+    "status": {"const": "candidate"},
+    "fields": {
+      "type": "object",
+      "properties": {
+        "contextTokens": {"$ref": "#/$defs/tokenRule"},
+        "maxOutputTokens": {"$ref": "#/$defs/tokenRule"},
+        "temperature": {"$ref": "#/$defs/optionalRule"},
+        "reasoningEffort": {"$ref": "#/$defs/optionalRule"}
+      },
+      "required": ["contextTokens", "maxOutputTokens", "temperature", "reasoningEffort"],
+      "additionalProperties": false
+    },
+    "mutuallyExclusive": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {"enum": ["temperature", "reasoningEffort"]},
+        "minItems": 2,
+        "uniqueItems": true
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    }
+  },
+  "required": ["schemaVersion", "revision", "status", "fields", "mutuallyExclusive"],
+  "additionalProperties": false
+}

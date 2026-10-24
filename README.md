@@ -13,6 +13,14 @@
 - [技术方案对照评审](doc/technical-review.md)
 - [开发任务与验收计划](doc/development-tasks.md)
 
+## HB-08 候选契约检查
+
+```sh
+python3 scripts/check-baseline.py
+```
+
+仅使用 Python 标准库，执行清单/schema、证据失效和 ValidationRunGrant 的离线回归；不下载、不调用模型、不启动沙箱。通过不代表产品验收或基线冻结；当前所有候选组合均不可供普通用户执行。详见 [HB-08 证据](doc/verification/HB-08.md)、[协议与领域契约](contracts/protocol.md) 和 [正式构建依赖清单](doc/build-dependencies.md)。
+
 ## AI 编程协作
 
 共用规范维护在 [AGENTS.md](AGENTS.md)，不依赖开发者个人的全局配置。

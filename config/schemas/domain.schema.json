@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:havenbox:domain:v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "Session"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^session_[A-Za-z0-9-]+$"
+        },
+        "binding": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "Agent"
+                },
+                "recipeRevision": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "recipeRevision"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "const": "ToolsOnly"
+                },
+                "toolPolicyRevision": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "kind",
+                "toolPolicyRevision"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "binding"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "Turn"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^turn_[A-Za-z0-9-]+$"
+        },
+        "sessionId": {
+          "type": "string",
+          "pattern": "^session_[A-Za-z0-9-]+$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "route": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "Local"
+                    },
+                    "resourceRevision": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "runtimeRevision": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "modelId": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "resourceRevision",
+                    "runtimeRevision",
+                    "modelId"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "const": "Online"
+                    },
+                    "providerRevision": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "credentialVersion": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "protocol": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "modelId": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "providerRevision",
+                    "credentialVersion",
+                    "protocol",
+                    "modelId"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "sessionId",
+        "sequence",
+        "route"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "ExecutionTask"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^task_[A-Za-z0-9-]+$"
+        },
+        "turnId": {
+          "type": "string",
+          "pattern": "^turn_[A-Za-z0-9-]+$"
+        },
+        "planDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "approvalId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "turnId",
+        "planDigest",
+        "approvalId"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "CallPermit"
+        },
+        "callId": {
+          "type": "string",
+          "pattern": "^call_[A-Za-z0-9-]+$"
+        },
+        "taskId": {
+          "type": "string",
+          "pattern": "^task_[A-Za-z0-9-]+$"
+        },
+        "planDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "argumentsDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "stepIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expiresAt": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "kind",
+        "callId",
+        "taskId",
+        "planDigest",
+        "argumentsDigest",
+        "stepIndex",
+        "epoch",
+        "expiresAt"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "ArtifactVersion"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^file_[A-Za-z0-9-]+$"
+        },
+        "provenanceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "completeness": {
+          "enum": [
+            "complete",
+            "partial",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "provenanceId",
+        "contentHash",
+        "completeness"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "Event"
+        },
+        "eventId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workspaceEpoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sessionId": {
+          "type": "string",
+          "pattern": "^session_[A-Za-z0-9-]+$"
+        },
+        "turnId": {
+          "type": "string",
+          "pattern": "^turn_[A-Za-z0-9-]+$"
+        },
+        "taskId": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^task_[A-Za-z0-9-]+$"
+            }
+          ]
+        },
+        "callId": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^call_[A-Za-z0-9-]+$"
+            }
+          ]
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "type": {
+          "enum": [
+            "textDelta",
+            "planSuggestion",
+            "toolSuggestion",
+            "approvalRequired",
+            "usage",
+            "completed",
+            "error"
+          ]
+        },
+        "payloadDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "eventId",
+        "workspaceEpoch",
+        "sessionId",
+        "turnId",
+        "taskId",
+        "callId",
+        "sequence",
+        "type",
+        "payloadDigest"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}
