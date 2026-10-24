@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:havenbox:csv-tools:v1-candidate",
+  "description": "Declarative adapter contract; adapters must resolve IDs through their engine registry. No paths, expressions, SQL or arbitrary Markdown.",
+  "$defs": {
+    "file": {"type":"string","pattern":"^csv_[0-9]+$"},
+    "fact": {"type":"string","pattern":"^fact_[0-9]+$"},
+    "columns": {"type":"array","items":{"type":"string","minLength":1,"maxLength":1048576},"uniqueItems":true,"maxItems":256},
+    "condition": {"oneOf":[
+      {"type":"object","additionalProperties":false,"required":["kind","column","op","value"],"properties":{"kind":{"const":"compare"},"column":{"type":"string","minLength":1},"op":{"enum":["eq","ne","lt","le","gt","ge"]},"value":{"oneOf":[{"type":"object","additionalProperties":false,"required":["text"],"properties":{"text":{"type":"string","maxLength":1048576}}},{"type":"object","additionalProperties":false,"required":["decimal"],"properties":{"decimal":{"type":"string","pattern":"^-?(0|[1-9][0-9]{0,15})(\\.[0-9]{1,2})?$"}}}]}}},
+      {"type":"object","additionalProperties":false,"required":["kind","columns","mode"],"properties":{"kind":{"const":"duplicate_key"},"columns":{"$ref":"#/$defs/columns","minItems":1},"mode":{"enum":["all_members","after_first"]}}}
+    ]}
+  },
+  "oneOf": [
+    {"type":"object","additionalProperties":false,"required":["tool","input"],"properties":{"tool":{"const":"inspect_csv"},"input":{"$ref":"#/$defs/file"}}},
+    {"type":"object","additionalProperties":false,"required":["tool","inputs"],"properties":{"tool":{"const":"concat_csv"},"inputs":{"type":"array","minItems":1,"maxItems":20,"items":{"$ref":"#/$defs/file"}}}},
+    {"type":"object","additionalProperties":false,"required":["tool","input","condition"],"properties":{"tool":{"const":"filter_rows"},"input":{"$ref":"#/$defs/file"},"condition":{"$ref":"#/$defs/condition"}}},
+    {"type":"object","additionalProperties":false,"required":["tool","input","group_by","sum"],"properties":{"tool":{"const":"aggregate_csv"},"input":{"$ref":"#/$defs/file"},"group_by":{"$ref":"#/$defs/columns"},"sum":{"type":"string","minLength":1}}},
+    {"type":"object","additionalProperties":false,"required":["tool","facts"],"properties":{"tool":{"const":"write_report"},"facts":{"type":"array","maxItems":100000,"items":{"$ref":"#/$defs/fact"}}}}
+  ]
+}

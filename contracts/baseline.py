@@ -18,6 +18,8 @@ SNAPSHOT_PATHS = (
     'guest/protocol/Cargo.toml', 'guest/adapters/Cargo.toml', 'guest/supervisor/Cargo.toml',
     'guest/protocol/src', 'guest/supervisor/src', 'guest/adapters/src', 'tests/HavenboxCoreTests',
     'tests/WorkspaceStoreTests', 'tests/RuntimeTests',
+    'guest/csv-engine/Cargo.toml', 'guest/csv-engine/src', 'guest/csv-engine/tests',
+    'guest/csv-engine/schema.json',
     'tests/generate-header-vectors.py', 'contracts/header-vectors.tsv',
 )
 

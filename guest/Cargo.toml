@@ -1,5 +1,5 @@
 [workspace]
-members = ["protocol", "supervisor", "adapters"]
+members = ["protocol", "supervisor", "adapters", "csv-engine"]
 resolver = "3"
 
 [workspace.package]

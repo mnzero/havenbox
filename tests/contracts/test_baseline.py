@@ -201,7 +201,7 @@ class BaselineTests(unittest.TestCase):
         # Keep these explicit so an inventory omission cannot hide the regression.
         paths.add('tests/RuntimeTests/RuntimeTests.swift')
         paths.update(f'guest/{crate}/Cargo.toml' for crate in
-                     ('protocol', 'adapters', 'supervisor'))
+                     ('protocol', 'adapters', 'supervisor', 'csv-engine'))
         with tempfile.TemporaryDirectory(prefix='hb09-regression-') as directory:
             root = Path(directory).resolve()
             for relative in paths:
@@ -214,7 +214,7 @@ class BaselineTests(unittest.TestCase):
     def test_actual_crate_manifest_drift(self):
         with self.private_source() as root:
             check_inventory(self.manifest, self.matrix)
-            for crate in ('protocol', 'adapters', 'supervisor'):
+            for crate in ('protocol', 'adapters', 'supervisor', 'csv-engine'):
                 with self.subTest(crate=crate):
                     path = root / f'guest/{crate}/Cargo.toml'
                     original = path.read_bytes()
@@ -226,6 +226,17 @@ class BaselineTests(unittest.TestCase):
                             check_inventory(self.manifest, self.matrix)
                     finally:
                         path.write_bytes(original)
+                    check_inventory(self.manifest, self.matrix)
+
+    def test_actual_csv_engine_drift(self):
+        for relative in ('guest/csv-engine/src/lib.rs', 'guest/csv-engine/src/spill.rs',
+                         'guest/csv-engine/tests/acceptance.rs', 'guest/csv-engine/schema.json'):
+            self.assertIn(relative, self.manifest['sourceSnapshot']['paths'])
+            with self.private_source() as root:
+                check_inventory(self.manifest, self.matrix)
+                path = root / relative
+                path.write_bytes(path.read_bytes() + b'\n ')
+                with self.assertRaisesRegex(ContractError, 'source snapshot content drift'):
                     check_inventory(self.manifest, self.matrix)
 
     def test_actual_runtime_test_drift(self):
