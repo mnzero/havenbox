@@ -1,17 +1,33 @@
 {
-  "adapterVersion": "hb06-dsh-probe-2",
+  "adapterVersion": "hb06-dsh-probe-3",
   "source": "https://github.com/deepseek-ai/deepseek-harness",
-  "commit": "22ddee3792402c3e70ec5f86a63c3e3e895a2f60",
+  "commit": "1f81c047fc48fa190a683e469daa699857e9afe8",
   "version": "0.2.1-rc.3",
   "license": "MIT",
-  "nodeRequirement": ">=24.9.0",
+  "nodeRequirement": "^22.19.0 || >=24.0.0",
   "profile": "sdk-minimal",
-  "runtimeArtifactSha256": null,
-  "qualification": "blocked",
+  "runtimeArtifactSha256": "29983314e70ad0aca288b498e317e909d209279c8ce0292c5e6d13749c2fe5df",
+  "qualification": "host-protocol-observed; VM/model/approval-unverified",
   "wire": "newline-delimited JSON-RPC 2.0 over stdio",
-  "methods": ["initialize", "session/prompt", "session/resume", "session/wait", "session/working-directory/get", "session/working-directory/set", "shutdown"],
-  "notifications": ["session.event", "session.status", "user-question.cancelled", "subagent.started", "subagent.finished"],
-  "approval": {"method": "approval/request", "initializeFlag": "approvalRequests", "defaultOutcome": "rejected"},
+  "methods": [
+    "initialize",
+    "session/prompt",
+    "session/resume",
+    "session/wait",
+    "session/working-directory/get",
+    "session/working-directory/set",
+    "shutdown"
+  ],
+  "notifications": [
+    "session.event",
+    "session.status",
+    "subagent.started",
+    "subagent.finished"
+  ],
+  "approval": {
+    "status": "not exposed by release protocol; requires adapter/plugin work"
+  },
   "cancellation": "No session/cancel in pinned protocol; revoke gateway grant and terminate isolated runtime process group",
-  "recovery": "Rebuild from validated host history after reauthorization; never replay tool calls or approval outcomes"
+  "recovery": "Rebuild from validated host history after reauthorization; never replay tool calls or approval outcomes",
+  "protocolVersion": "0.0.1"
 }

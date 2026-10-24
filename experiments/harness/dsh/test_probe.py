@@ -112,6 +112,24 @@ class ProbeTests(unittest.TestCase):
                     self.assertFalse(record["homeCreated"])
                     self.assertIsNone(record["environment"])
 
+    def test_sequential_requests_keep_stdin_open(self):
+        requests = [{"jsonrpc": "2.0", "id": i, "method": "test"} for i in (1, 2)]
+        result = self.run_fake(
+            'import sys,json,time\n'
+            'for _ in range(2):\n'
+            ' r=json.loads(sys.stdin.readline())\n'
+            ' print(json.dumps({"jsonrpc":"2.0","method":"event"}),flush=True)\n'
+            ' print(json.dumps({"jsonrpc":"2.0","id":r["id"],"result":{}}),flush=True)\n'
+            'time.sleep(30)\n', requests=requests)
+        self.assertEqual(result["readStatus"], "response")
+        self.assertEqual(len(result["messages"]), 4)
+
+    def test_initialize_error_is_not_success(self):
+        checks = probe.protocol_checks({"messages": [{"id": 1, "error": {"code": -32603}}],
+                                        "readStatus": "response"}, Path("/unused"))
+        self.assertFalse(checks["initialize"])
+        self.assertFalse(all(checks.values()))
+
     def test_contract_version_matches(self):
         contract = json.loads((probe.ROOT / "contract.json").read_text())
         self.assertEqual(contract["adapterVersion"], probe.ADAPTER)

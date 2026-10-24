@@ -2,10 +2,23 @@
   "runtime": "dsh",
   "version": "0.2.1-rc.3",
   "source": "https://github.com/deepseek-ai/deepseek-harness",
-  "commit": "22ddee3792402c3e70ec5f86a63c3e3e895a2f60",
+  "commit": "1f81c047fc48fa190a683e469daa699857e9afe8",
   "launcher": "runtime/bin/dsh",
   "lockfile": "runtime/package-lock.json",
-  "launcherSha256": null,
-  "lockfileSha256": null,
-  "nodeRequirement": ">=24.9.0"
+  "launcherSha256": "536c8a0fcbd5e615b1f84a283ee5105e04beb0e94b8f7eb341a44ac7b8755af8",
+  "lockfileSha256": "540e59dee703e74d6a1aea51f4ed951923cfd3a2e339ef66d1566e4b7bee9cc5",
+  "nodeRequirement": "^22.19.0 || >=24.0.0",
+  "nodeVersion": "24.9.0",
+  "releaseTag": "dsh-v0.2.1-rc.3",
+  "license": "MIT",
+  "installedTreeSha256": "29983314e70ad0aca288b498e317e909d209279c8ce0292c5e6d13749c2fe5df",
+  "artifacts": {
+    "runtime/node-v24.9.0-darwin-arm64/bin/node": "ac1b8926054c59ba572f0a3dd2e520413f88201058848917946446151182c18d",
+    "runtime/source/pnpm-lock.yaml": "911b049924e8256d8d6e684235cf935ca75b28fd0dd46f0c3b316a51c2cf5dc1",
+    "runtime/source/LICENSE": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be",
+    "runtime/source/packages/sdk/protocol/src/types.ts": "67c20951b975462a71e0cdbbd8b61bd0c9cdf9abff4ac4a52f70795411751cd2",
+    "runtime/source/packages/sdk/server/src/server.ts": "3dd846373e346f7547e97a73c3eae0f243e7aa77bd34950c540046c73d628479"
+  },
+  "nodeArchiveSha256": "961024296c2a8e60daed0784f8b61e0fab5c51d197502a92eff052c72b53209b",
+  "npmIntegrity": "sha512-H+E9HLnHf7fJqzen84Z9Bq8ggb5xbrcbyhZjXTJLE9NabHr3zteGvTRvdvGkxPl4ov80is4WLglFmSo+/olJjg=="
 }

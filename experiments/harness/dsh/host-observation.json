@@ -1,0 +1,141 @@
+{
+  "actual": {
+    "initializeResponse": {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "result": {
+        "serverInfo": {
+          "name": "deepseek-harness-sdk-runtime",
+          "version": "0.0.1"
+        }
+      }
+    },
+    "messages": [
+      {
+        "id": 1,
+        "jsonrpc": "2.0",
+        "result": {
+          "serverInfo": {
+            "name": "deepseek-harness-sdk-runtime",
+            "version": "0.0.1"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "jsonrpc": "2.0",
+        "result": {
+          "cwd": "/var/folders/3z/9_kfdsbx3fb1cgvw55td3g2w0000gn/T/hb06-dsh-home-1dne69p7/workspace"
+        }
+      },
+      {
+        "id": 3,
+        "jsonrpc": "2.0",
+        "result": {}
+      },
+      {
+        "error": {
+          "code": -32603,
+          "message": "unknown SDK session: missing"
+        },
+        "id": 4,
+        "jsonrpc": "2.0"
+      },
+      {
+        "error": {
+          "code": -32603,
+          "message": "unknown DeepSeek Harness SDK runtime method: session/cancel"
+        },
+        "id": 5,
+        "jsonrpc": "2.0"
+      },
+      {
+        "error": {
+          "code": -32603,
+          "message": "session \"missing\" not found"
+        },
+        "id": 6,
+        "jsonrpc": "2.0"
+      },
+      {
+        "error": {
+          "code": -32603,
+          "message": "no adapter registered for provider \"hb06-no-adapter\""
+        },
+        "id": 7,
+        "jsonrpc": "2.0"
+      },
+      {
+        "id": 8,
+        "jsonrpc": "2.0",
+        "result": {}
+      }
+    ],
+    "processGroupKillSent": true,
+    "readStatus": "response",
+    "stderrObserved": false
+  },
+  "adapterVersion": "hb06-dsh-probe-3",
+  "candidateId": "dsh",
+  "command": [
+    "/Users/mnzero/orca/workspaces/havenbox/hb06-sdk/experiments/harness/dsh/runtime/bin/dsh",
+    "--profile",
+    "sdk-minimal"
+  ],
+  "environment": {
+    "DSH_HOME": "/var/folders/3z/9_kfdsbx3fb1cgvw55td3g2w0000gn/T/hb06-dsh-home-1dne69p7/dsh",
+    "network": "host-not-isolated; loopback-only model configuration",
+    "profile": "sdk-minimal",
+    "telemetry": "omitted-by-sdk-minimal-unverified"
+  },
+  "evidence": {
+    "approval": "not_started",
+    "cancellation": "unsupported RPC observed; idle runtime process group killed",
+    "errors": "missing session/resume/adapter and unsupported cancel observed",
+    "keyPersistence": "scan of disposable home only; not general credential proof",
+    "network": "loopback-route-configured-no-inference-sent; not firewall proof",
+    "recovery": "not_started",
+    "telemetry": "profile-omission-only-unverified"
+  },
+  "exitCode": -9,
+  "expectedLauncherSha256": "536c8a0fcbd5e615b1f84a283ee5105e04beb0e94b8f7eb341a44ac7b8755af8",
+  "expectedLockfileSha256": "540e59dee703e74d6a1aea51f4ed951923cfd3a2e339ef66d1566e4b7bee9cc5",
+  "homeCreated": true,
+  "homeRemoved": true,
+  "launcherPath": "/Users/mnzero/orca/workspaces/havenbox/hb06-sdk/experiments/harness/dsh/runtime/bin/dsh",
+  "lockfilePath": "/Users/mnzero/orca/workspaces/havenbox/hb06-sdk/experiments/harness/dsh/runtime/package-lock.json",
+  "observations": [
+    "real pinned launcher started",
+    "non-inference SDK sequence sent",
+    "process group killed after bounded probe; not active-turn cancellation evidence"
+  ],
+  "observedLauncherSha256": "536c8a0fcbd5e615b1f84a283ee5105e04beb0e94b8f7eb341a44ac7b8755af8",
+  "observedLockfileSha256": "540e59dee703e74d6a1aea51f4ed951923cfd3a2e339ef66d1566e4b7bee9cc5",
+  "persistenceScan": {
+    "files": 5,
+    "sentinelFound": false
+  },
+  "protocolChecks": {
+    "cancelUnsupported": true,
+    "complete": true,
+    "idleWait": true,
+    "initialize": true,
+    "missingAdapterError": true,
+    "missingResumeError": true,
+    "missingSessionError": true,
+    "sessionCreated": true,
+    "shutdown": true
+  },
+  "result": "observed",
+  "sourceUrlOrCommit": "https://github.com/deepseek-ai/deepseek-harness@1f81c047fc48fa190a683e469daa699857e9afe8",
+  "unverifiedBoundaries": [
+    "network isolation",
+    "telemetry suppression",
+    "key persistence",
+    "approval",
+    "cancellation",
+    "error",
+    "recovery"
+  ],
+  "version": "0.2.1-rc.3"
+}
