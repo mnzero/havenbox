@@ -1,0 +1,296 @@
+{
+  "schemaVersion": "hb.runtime-candidates.v1",
+  "status": "candidate-lock",
+  "lockedAt": "2026-10-23",
+  "purpose": "HB-01 feasibility candidates; no entry is validated until a real probe records evidence.",
+  "referenceDevice": {
+    "id": "macos-arm64-16gb-reference",
+    "platform": "macOS",
+    "architecture": "arm64",
+    "memoryGiB": 16,
+    "osVersion": null,
+    "hardwareModel": null,
+    "status": "to-measure",
+    "minimumOSVersion": null,
+    "measurementNote": "16 GiB is the target reference, not a measurement of this worker host."
+  },
+  "candidates": {
+    "host": {
+      "swift": {
+        "version": "6.3.3",
+        "source": "swift.org toolchain; verify against target macOS",
+        "sha256": null,
+        "license": "Apache-2.0",
+        "licenseReview": "pending",
+        "status": "candidate-unverified",
+        "versionNote": "Existing candidate string retained; release availability, installed version and compatibility are not verified."
+      },
+      "rust": {
+        "version": "1.97.1",
+        "source": "rust-lang.org toolchain; verify build environment",
+        "sha256": null,
+        "license": "MIT OR Apache-2.0",
+        "licenseReview": "pending",
+        "status": "candidate-unverified",
+        "versionNote": "Existing candidate string retained; release availability, installed version and compatibility are not verified."
+      }
+    },
+    "runtime": {
+      "qemu": {
+        "version": null,
+        "source": "QEMU official release/build commit",
+        "sha256": null,
+        "license": "GPL-2.0-or-later",
+        "licenseReview": "pending",
+        "status": "to-probe"
+      },
+      "machine": {
+        "id": "virt-arm64",
+        "version": null,
+        "source": "QEMU machine definition",
+        "sha256": null,
+        "license": "GPL-2.0-or-later",
+        "licenseReview": "pending",
+        "status": "to-probe"
+      },
+      "guestKernel": {
+        "version": null,
+        "source": "project-built Linux arm64 image",
+        "sha256": null,
+        "license": "GPL-2.0-only",
+        "licenseReview": "pending",
+        "status": "to-probe"
+      },
+      "image": {
+        "version": null,
+        "source": "project-built guest image",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-probe"
+      }
+    },
+    "harnesses": [
+      {
+        "id": "kimi-cli",
+        "version": null,
+        "protocol": "ACP",
+        "source": "Kimi Code CLI official release",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-probe"
+      },
+      {
+        "id": "pi",
+        "version": null,
+        "protocol": "JSONL RPC",
+        "source": "Pi coding agent official release",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-probe"
+      },
+      {
+        "id": "dsh",
+        "version": null,
+        "protocol": "SDK JSON-RPC",
+        "source": "dsh official release",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-probe"
+      }
+    ],
+    "models": {
+      "local": [
+        {
+          "id": null,
+          "quantization": null,
+          "runtime": null,
+          "source": "local model artifact selected by HB-07",
+          "sha256": null,
+          "license": null,
+          "licenseReview": "pending",
+          "status": "to-probe"
+        }
+      ],
+      "network": [
+        {
+          "provider": null,
+          "modelId": null,
+          "protocol": null,
+          "endpoint": null,
+          "source": "explicitly authorized provider selected by HB-04..07",
+          "sha256": null,
+          "license": null,
+          "licenseReview": "pending",
+          "status": "to-probe"
+        }
+      ]
+    },
+    "tools": {
+      "mcpProtocol": {
+        "version": "2025-06-18",
+        "source": "modelcontextprotocol.io specification",
+        "sha256": null,
+        "license": "CC-BY-4.0",
+        "licenseReview": "pending",
+        "status": "candidate"
+      },
+      "csvEngine": {
+        "version": "hb-csv-engine-unimplemented",
+        "source": "this repository; implementation is HB-13",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-implement"
+      },
+      "cli": {
+        "version": "hb-cli-unimplemented",
+        "source": "this repository; implementation is HB-14",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-implement"
+      },
+      "mcpSdk": {
+        "version": null,
+        "source": "Select official MCP SDK during probes",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-probe"
+      },
+      "mcpServer": {
+        "version": null,
+        "source": "this repository; implementation is HB-15",
+        "sha256": null,
+        "license": null,
+        "licenseReview": "pending",
+        "status": "to-implement"
+      }
+    }
+  },
+  "combinations": [
+    {
+      "id": "kimi-cli-network-csv",
+      "harness": "kimi-cli",
+      "model": "network:pending",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "status": "untested",
+      "evidence": null
+    },
+    {
+      "id": "pi-network-csv",
+      "harness": "pi",
+      "model": "network:pending",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "status": "untested",
+      "evidence": null
+    },
+    {
+      "id": "dsh-network-csv",
+      "harness": "dsh",
+      "model": "network:pending",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "status": "untested",
+      "evidence": null
+    },
+    {
+      "id": "candidate-local-csv",
+      "harness": "harness:pending",
+      "model": "local:pending",
+      "toolEntryPoints": [
+        "mcp",
+        "cli"
+      ],
+      "status": "untested",
+      "evidence": null
+    }
+  ],
+  "probeRecord": {
+    "requiredFields": [
+      "candidateId",
+      "measuredVersion",
+      "sourceUrlOrCommit",
+      "sha256",
+      "license",
+      "command",
+      "environment",
+      "observations",
+      "result",
+      "evidencePath",
+      "recordedAt",
+      "adapterVersion",
+      "modelId",
+      "modelProtocol",
+      "toolEntryPoint",
+      "expected",
+      "actual",
+      "exitCode",
+      "unverifiedBoundaries"
+    ],
+    "allowedResults": [
+      "pass",
+      "fail",
+      "blocked",
+      "unknown"
+    ],
+    "rule": "A combination remains untested until all required components have real probe evidence; documentation or process startup alone cannot produce pass."
+  },
+  "baseline": {
+    "sourceRef": "origin/main",
+    "commit": "9b27e3060e9bc367aa0ff7d8552f310f2b605b04",
+    "task": "HB-01",
+    "evidencePath": "doc/verification/HB-01.md",
+    "lockMeaning": "Candidate inventory only; null means unresolved, not a tested version. Final version/API freeze is HB-08."
+  },
+  "candidateCommands": [
+    {
+      "id": "fixture-oracle",
+      "command": "python3 tests/fixtures/csv/check.py",
+      "scope": "HB-01 deterministic fixture arithmetic only",
+      "status": "ready"
+    },
+    {
+      "id": "kimi-version",
+      "command": "kimi --version",
+      "scope": "HB-04 version discovery only; not compatibility acceptance",
+      "status": "not-run"
+    },
+    {
+      "id": "pi-version",
+      "command": "pi --version",
+      "scope": "HB-05 version discovery only; not compatibility acceptance",
+      "status": "not-run"
+    },
+    {
+      "id": "qemu-version",
+      "command": "qemu-system-aarch64 --version",
+      "scope": "HB-02 version discovery only; not VM acceptance",
+      "status": "not-run"
+    },
+    {
+      "id": "dsh-probe",
+      "command": null,
+      "scope": "HB-06 must confirm binary and SDK profile invocation before execution",
+      "status": "to-define"
+    },
+    {
+      "id": "local-model-probe",
+      "command": null,
+      "scope": "HB-07 must select model artifact, runtime and authorized tool-call probe",
+      "status": "to-define"
+    }
+  ]
+}

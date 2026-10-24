@@ -1,0 +1,6 @@
+experiments/vm/asset-manifest.json
+experiments/vm/assets/*
+experiments/vm/state/
+experiments/vm/tools/
+experiments/vm/__pycache__/
+!experiments/vm/assets/guest-payload.sh

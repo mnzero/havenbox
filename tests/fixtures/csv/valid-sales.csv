@@ -1,0 +1,6 @@
+customer_id,store,amount,category,note
+c-001,North,100.00,retail,regular sale
+c-002,North,250.00,retail,regular sale
+c-003,South,350.00,services,regular sale
+c-004,South,-20.00,refund,exclude negative
+c-005,North,20.00,retail,additional synthetic sale

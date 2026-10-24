@@ -30,3 +30,7 @@
 ## Git 提交规范
 
 采用 Conventional Commits，格式为 `type(scope): 描述`。启用命令、类型列表与校验方式见[提交规范](doc/commit-conventions.md)。
+
+## VM 模块
+
+HB-02 smoke guest 的 initramfs 加载六个模块：`virtio_blk`、`qemu_fw_cfg`、`crc16`、`mbcache`、`jbd2` 和 `ext4`。

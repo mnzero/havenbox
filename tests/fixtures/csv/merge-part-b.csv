@@ -1,0 +1,3 @@
+customer_id,store,amount,category,note
+c-004,South,50.00,retail,regular sale
+c-005,North,75.00,services,regular sale
