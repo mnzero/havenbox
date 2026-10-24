@@ -1,6 +1,6 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb13-candidate-2",
+  "revision": "hb16-candidate-2",
   "state": "candidate",
   "sourceCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
   "platform": {
@@ -411,7 +411,7 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "ad39f1af91b3d25eb96adf26ba4c1657c5080c1dd4a3ced6cc689e7b6bb62c73"
+      "sha256": "dec7e6713a8425fd75f3ad25ee1b89ba7fc930046b2e073f96672ec0af4e2a2b"
     },
     {
       "id": "contracts/protocol.md",
@@ -451,7 +451,7 @@
     {
       "id": "scripts/engineering.py",
       "path": "scripts/engineering.py",
-      "sha256": "9051ec8074ce15f04b4f6939c49ea18bd6ec8d319848142628da2f0cbcac1c63"
+      "sha256": "54bf6862bb9303c1a6e517df9cb61d4ef01254cec9cfd207d82850fddac79b11"
     },
     {
       "id": "Sources/HavenboxCore/ProtocolHeader.swift",
@@ -490,7 +490,7 @@
   ],
   "sourceSnapshot": {
     "baseCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
-    "sha256": "e83f3990bac1fa4ff34fddeffdd5441c0676d0efc71abcaf4b0d94958c81d6dc",
+    "sha256": "bbbbf13992eb574fc4bad8f50671db5755e1ec1e5dc61d60930861c1f4c0e763",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",
@@ -498,6 +498,7 @@
       "Sources/CSQLite/include/sqlite3.h",
       "Sources/CSQLite/sqlite3.c",
       "Sources/HavenboxApp/HavenboxApp.swift",
+      "Sources/HavenboxCore/Configuration.swift",
       "Sources/HavenboxCore/ProtocolHeader.swift",
       "Sources/HavenboxCore/RuntimeManager.swift",
       "Sources/HavenboxCore/RuntimeWatchdog.swift",
@@ -527,6 +528,7 @@
       "guest/supervisor/src/main.rs",
       "guest/supervisor/src/sandbox.rs",
       "scripts/engineering.py",
+      "tests/ConfigurationTests/ConfigurationTests.swift",
       "tests/HavenboxCoreTests/ProtocolTests.swift",
       "tests/RuntimeTests/RuntimeTests.swift",
       "tests/WorkspaceStoreTests/StorageTests.swift",

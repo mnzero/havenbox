@@ -47,7 +47,7 @@ extension WorkspaceStore {
     }
 
     // Migration SQL is compiled, trusted host code, never a guest or UI input.
-    // Internal until a real v2 migration is defined. Tests exercise the same mechanism.
+    // Internal future-schema migration hook; the built-in v1→v2 migration runs at open.
     func migrate(to version: Int, sql: String, backupURL: URL) throws {
         guard version > WorkspaceSchema.version, !database.readOnly else { throw WorkspaceStoreError("Invalid migration target") }
         guard try database.query("SELECT 1 FROM active_slot").isEmpty else { throw WorkspaceStoreError("Migration requires no active turn") }
