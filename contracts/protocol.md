@@ -22,7 +22,9 @@
 | file | 每块 256 KiB（含 JSON 编码后字节） | ReadArtifact / FileChunk | FileChunk，仅响应宿主已登记请求 |
 | inference | 4 MiB | InferenceResponse / Cancel | InferenceRequest，仅固定路由引用 |
 
-未知版本、方向、类型、跨 epoch、重复/未知 request ID、过长和坏哈希一律拒绝，不能把未知事件映射成功。停止通道独立队列和保留容量；不与文件传输争同一个阻塞读取。宿主 socket 目录 0700，QMP 不开放给来宾。FileChunk 不含宿主路径；导出必须关联宿主先登记的 ReadArtifact。HB-08 仅定义帧和 DTO。HB-09 在 Swift/Rust 实现共享 golden vectors 驱动的固定 68-byte header 预检，拒绝未知版本、通道、flags、epoch 和过长载荷；这不是字节流解码器，尚不校验 payload 哈希/JSON、方向、request 注册或握手，不可据其接受载荷执行。
+未知版本、方向、类型、跨 epoch、重复/未知 request ID、过长和坏哈希一律拒绝，不能把未知事件映射成功。停止控制使用独立设备和有界队列，不与文件或推理传输争同一个阻塞读取。宿主 socket 目录 0700，QMP 不开放给来宾。FileChunk 不含宿主路径；导出必须关联宿主先登记的 ReadArtifact。
+
+HB-11 candidate 在 Swift/Rust 都实现了固定 68-byte header、先验长度、payload SHA-256、严格 UTF-8 JSON、重复 JSON key、消息类型/方向和 request registry 校验；Rust `FrameReader` 先读固定头并按通道上限分配，三通道使用独立有界队列。`Hello`/`HelloAck` 的 JSON `instance` 必须匹配宿主生成实例，heartbeat 的 `sequence` 为严格递增十进制字符串，epoch 同时受 header 与运行参数绑定。SHA-256 只做传输完整性检查，不是认证；宿主和来宾身份来自固定本地 transport、受管启动实例与 epoch。当前代码已通过 host-native 单元测试，但正式 Linux image、virtio-serial 流和 QEMU 强杀尚未在本工作树实测，不能据此把 candidate 提升为 validated。
 
 ## 领域边界
 

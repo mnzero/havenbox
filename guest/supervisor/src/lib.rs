@@ -1,5 +1,10 @@
 //! Candidate supervisor policy. Production task admission stays closed until Linux integration.
+pub(crate) mod policy;
+pub mod process;
+pub(crate) mod quota;
+pub mod runtime;
 pub mod sandbox;
+pub(crate) mod seccomp;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
@@ -12,6 +17,7 @@ pub enum Error {
     Resource,
     Unsupported,
     Io(String),
+    Protocol,
 }
 #[derive(Debug, PartialEq, Eq)]
 pub enum State {
@@ -128,10 +134,16 @@ impl Supervisor {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Role {
     Harness,
     Worker,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SyntheticCase {
+    Normal,
+    OutputOverflow,
+    Hold,
 }
 /// Exact topology, not a list of requested arbitrary bind mounts.
 #[derive(Debug, PartialEq, Eq)]
@@ -146,19 +158,17 @@ pub struct Boundary {
 }
 impl Boundary {
     pub fn validate(&self) -> Result<(), Error> {
-        let (uid, paths): (u32, &[&str]) = match self.role {
-            Role::Harness => (10001, &["/context", "/history", "/tmp"]),
-            Role::Worker => (10002, &["/input", "/output", "/tmp"]),
-        };
-        if self.uid != uid || !self.input_readonly || self.visible != paths {
+        let profile = crate::policy::SyntheticProfile::for_role(self.role);
+        let expected = profile.boundary();
+        if self.uid != expected.uid
+            || self.input_readonly != expected.input_readonly
+            || self.visible != expected.visible
+        {
             return Err(Error::Boundary);
         }
-        if self.memory_bytes == 0
-            || self.memory_bytes > 536_870_912
-            || self.pids == 0
-            || self.pids > 64
-            || self.scratch_bytes == 0
-            || self.scratch_bytes > 2_147_483_648
+        if self.memory_bytes != expected.memory_bytes
+            || self.pids != expected.pids
+            || self.scratch_bytes != expected.scratch_bytes
         {
             return Err(Error::Resource);
         }
@@ -190,6 +200,15 @@ impl TaskCgroup {
         }
         std::fs::write(file, value).map_err(io)
     }
+    fn write_verified(&self, name: &str, value: &str) -> Result<(), Error> {
+        self.write(name, value)?;
+        let applied = std::fs::read_to_string(self.path.join(name)).map_err(io)?;
+        if applied.trim_end() == value {
+            Ok(())
+        } else {
+            Err(Error::Resource)
+        }
+    }
     pub fn configure(&self, boundary: &Boundary) -> Result<(), Error> {
         boundary.validate()?;
         if !cfg!(target_os = "linux") {
@@ -198,11 +217,17 @@ impl TaskCgroup {
         if self.path.canonicalize().map_err(io)? != self.path {
             return Err(Error::Boundary);
         }
-        self.write("memory.max", &boundary.memory_bytes.to_string())?;
-        self.write("memory.swap.max", "0")?;
-        self.write("memory.oom.group", "1")?;
-        self.write("pids.max", &boundary.pids.to_string())?;
-        self.write("cpu.max", "100000 100000")
+        self.write_verified("memory.max", &boundary.memory_bytes.to_string())?;
+        self.write_verified("memory.swap.max", "0")?;
+        self.write_verified("memory.oom.group", "1")?;
+        self.write_verified("pids.max", &boundary.pids.to_string())?;
+        self.write_verified("cpu.max", "100000 100000")
+    }
+    pub fn admit(&self, pid: u32) -> Result<(), Error> {
+        if pid <= 1 {
+            return Err(Error::Boundary);
+        }
+        self.write("cgroup.procs", &pid.to_string())
     }
     pub fn kill(&self) -> Result<(), Error> {
         self.write("cgroup.kill", "1")
@@ -220,6 +245,19 @@ impl TaskCgroup {
             Err(Error::Boundary)
         }
     }
+    pub fn kill_and_wait_empty(&self, timeout: std::time::Duration) -> Result<(), Error> {
+        self.kill()?;
+        let deadline = std::time::Instant::now() + timeout;
+        loop {
+            if self.empty()? {
+                return Ok(());
+            }
+            if std::time::Instant::now() >= deadline {
+                return Err(Error::Resource);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
 }
 fn io(error: std::io::Error) -> Error {
     Error::Io(error.to_string())
@@ -235,7 +273,7 @@ const BOOT_MOUNTS: &[(&str, &str, &str, &str, &str)] = &[
         "ext4",
         "/dev/vdb",
         "rw,nosuid,nodev,noexec,relatime",
-        "rw",
+        "rw,prjquota",
     ),
     (
         "/proc",
@@ -255,8 +293,8 @@ const BOOT_MOUNTS: &[(&str, &str, &str, &str, &str)] = &[
         "/dev",
         "devtmpfs",
         "devtmpfs",
-        "rw,nosuid,noexec",
-        "rw,size=65536k,nr_inodes=16384,mode=755",
+        "rw,nosuid,noexec,relatime",
+        "rw,size=2003720k,nr_inodes=500930,mode=755,inode64",
     ),
     (
         "/dev/pts",
@@ -276,8 +314,8 @@ const BOOT_MOUNTS: &[(&str, &str, &str, &str, &str)] = &[
         "/tmp",
         "tmpfs",
         "tmpfs",
-        "rw,nosuid,nodev,noexec",
-        "rw,size=65536k",
+        "rw,nosuid,nodev,noexec,relatime",
+        "rw,size=65536k,inode64",
     ),
 ];
 
@@ -303,8 +341,8 @@ pub fn inspect_boot(
     if network_names != ["lo"]
         || block_devices
             != [
-                ("vda".into(), "254:0".into()),
-                ("vdb".into(), "254:16".into()),
+                ("vda".into(), "253:0".into()),
+                ("vdb".into(), "253:16".into()),
             ]
     {
         return Err(Error::Boundary);
@@ -333,8 +371,8 @@ pub fn inspect_boot(
             return Err(Error::Boundary);
         }
         let valid_device = match fields[4] {
-            "/" => dev == (254, 0),
-            "/data" => dev == (254, 16),
+            "/" => dev == (253, 0),
+            "/data" => dev == (253, 16),
             _ => dev.0 == 0 && dev.1 != 0,
         };
         if !valid_device || mounts.insert(fields[4], (id, parent)).is_some() {
@@ -457,8 +495,8 @@ mod tests {
             .enumerate()
             .map(|(i, p)| {
                 let dev = match i {
-                    0 => "254:0".into(),
-                    1 => "254:16".into(),
+                    0 => "253:0".into(),
+                    1 => "253:16".into(),
                     _ => format!("0:{}", i + 1),
                 };
                 let parent = match p.0 {
@@ -480,8 +518,8 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
         let blocks = vec![
-            ("vda".into(), "254:0".into()),
-            ("vdb".into(), "254:16".into()),
+            ("vda".into(), "253:0".into()),
+            ("vdb".into(), "253:16".into()),
         ];
         let lo = vec!["lo".into()];
         inspect_boot(&mounts, &lo, &blocks).unwrap();
@@ -494,9 +532,9 @@ mod tests {
             assert!(inspect_boot(&format!("{mounts}\n{extra}"), &lo, &blocks).is_err());
         }
         for (from, to) in [
-            ("254:0 / /", "254:0 /subtree /"),
-            ("254:16", "254:17"),
-            ("254:0", "253:0"),
+            ("253:0 / /", "253:0 /subtree /"),
+            ("253:16", "253:17"),
+            ("253:0", "252:0"),
             ("ro,relatime", "ro,rw,relatime"),
             ("ro,relatime", "ro,relatime shared:1"),
             ("1 0 ", "1 2 "),

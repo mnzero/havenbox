@@ -1,0 +1,85 @@
+#!/bin/sh
+set -eu
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+fail() {
+    printf 'HB11_BOOT_FAIL %s\n' "$1" >/dev/console
+    poweroff -f
+}
+
+mount -t devtmpfs -o nosuid,noexec,size=65536k,nr_inodes=16384,mode=755 devtmpfs /dev
+mkdir -p /dev/pts /proc /sys /sys/fs/cgroup /tmp /data
+mount -t devpts -o nosuid,noexec,gid=5,mode=620,ptmxmode=000 devpts /dev/pts
+mount -t proc -o nosuid,nodev,noexec proc /proc
+mount -t sysfs -o ro,nosuid,nodev,noexec sysfs /sys
+mount -t cgroup2 -o nosuid,nodev,noexec cgroup /sys/fs/cgroup
+mount -t tmpfs -o nosuid,nodev,noexec,size=65536k tmpfs /tmp
+mount -t ext4 -o rw,nosuid,nodev,noexec,prjquota /dev/vdb /data
+
+mkdir -p /dev/virtio-ports
+found=
+# virtio-console is built in, but sysfs and devtmpfs enumeration can finish
+# after switch_root. Give the fixed ports a bounded window to appear instead of
+# turning a harmless boot race into a false missing-channel failure.
+for attempt in 1 2 3 4 5; do
+    found=
+    rm -f /dev/virtio-ports/hb.control /dev/virtio-ports/hb.file /dev/virtio-ports/hb.inference
+    for port in /sys/class/virtio-ports/*; do
+        [ -r "$port/name" ] || continue
+        name=$(cat "$port/name")
+        case "$name" in hb.control|hb.file|hb.inference) ;; *) fail virtio-port-name ;; esac
+        node=${port##*/}
+        [ -c "/dev/$node" ] || continue
+        ln -s "/dev/$node" "/dev/virtio-ports/$name"
+        found="$found $name"
+    done
+    complete=true
+    for name in hb.control hb.file hb.inference; do
+        case " $found " in *" $name "*) ;; *) complete=false ;; esac
+    done
+    [ "$complete" = true ] && break
+    sleep 1
+done
+for name in hb.control hb.file hb.inference; do
+    case " $found " in *" $name "*) ;; *) fail "missing-$name" ;; esac
+done
+
+# This is a dedicated synthetic validation disk. Recreate its fixed session
+# subtree so an interrupted VM cannot supply paths or ownership to a later run.
+rm -rf /data/active
+mkdir -p /data/active/context /data/active/history /data/active/input /data/active/output
+printf 'synthetic-context\n' >/data/active/context/probe.txt
+printf 'synthetic-input\n' >/data/active/input/probe.txt
+chmod 0555 /data/active/context /data/active/input
+chmod 0444 /data/active/context/probe.txt /data/active/input/probe.txt
+chown 10001:10001 /data/active/history
+chmod 0700 /data/active/history
+# The supervisor arms and reads back the project quota before it gives this
+# directory to the worker UID. A setup failure therefore leaves it root-owned.
+chmod 0700 /data/active/output
+
+printf '+memory +pids +cpu' >/sys/fs/cgroup/cgroup.subtree_control || fail cgroup-root
+mkdir -p /sys/fs/cgroup/havenbox
+printf '+memory +pids +cpu' >/sys/fs/cgroup/havenbox/cgroup.subtree_control || fail cgroup-parent
+mkdir -p /sys/fs/cgroup/havenbox/active
+
+instance=
+epoch=
+role=
+test_case=normal
+for option in $(cat /proc/cmdline); do
+    case "$option" in
+        hb.instance=*) instance=${option#hb.instance=} ;;
+        hb.epoch=*) epoch=${option#hb.epoch=} ;;
+        hb.synthetic_role=*) role=${option#hb.synthetic_role=} ;;
+        hb.synthetic_case=*) test_case=${option#hb.synthetic_case=} ;;
+    esac
+done
+[ "${#instance}" -eq 32 ] || fail instance
+case "$instance" in *[!0-9a-f]*) fail instance ;; esac
+case "$epoch" in ''|*[!0-9]*) fail epoch ;; esac
+[ "$epoch" -gt 0 ] || fail epoch
+case "$role" in harness|worker) ;; *) fail role ;; esac
+case "$test_case" in normal|output-overflow|hold) ;; *) fail synthetic-case ;; esac
+
+exec /usr/sbin/hb-supervisor --run-synthetic "$instance" "$epoch" "$role" "$test_case"

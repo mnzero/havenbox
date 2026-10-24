@@ -11,31 +11,21 @@ typedef void (*qemu_loop_fn)(void);
 typedef void (*qemu_cleanup_fn)(void);
 
 int main(int argc, const char *argv[]) {
-    const char *app = getenv("HB02_UTM_APP");
-    if (app == NULL || app[0] == '\0') {
-        app = "/Applications/UTM.app";
-    }
-
     const char *slash = strrchr(argv[0], '/');
     const char *program = slash == NULL ? argv[0] : slash + 1;
-    const char *framework = strcmp(program, "qemu-img") == 0
-        ? "qemu-img.framework/Versions/A/qemu-img"
-        : "qemu-aarch64-softmmu.framework/Versions/A/qemu-aarch64-softmmu";
-    size_t size = strlen(app) + strlen("/Contents/Frameworks/") + strlen(framework) + 1;
-    char *library = malloc(size);
-    if (library == NULL) {
-        fputs("failed to allocate QEMU framework path\n", stderr);
+    const char *library = getenv(strcmp(program, "qemu-img") == 0
+        ? "HB02_QEMU_IMG_FRAMEWORK"
+        : "HB02_QEMU_SYSTEM_FRAMEWORK");
+    if (library == NULL || library[0] != '/') {
+        fputs("an absolute pinned QEMU framework path is required\n", stderr);
         return 1;
     }
-    snprintf(library, size, "%s/Contents/Frameworks/%s", app, framework);
 
     void *handle = dlopen(library, RTLD_LOCAL | RTLD_LAZY | RTLD_FIRST);
     if (handle == NULL) {
         fprintf(stderr, "failed to load %s: %s\n", library, dlerror());
-        free(library);
         return 1;
     }
-    free(library);
 
     tool_main_fn tool_main = dlsym(handle, "main");
     if (tool_main != NULL) {

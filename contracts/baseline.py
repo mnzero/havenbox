@@ -16,10 +16,10 @@ SNAPSHOT_PATHS = (
     'Package.swift', 'config/build-toolchain.json', 'scripts/engineering.py',
     'Sources', 'guest/Cargo.toml', 'guest/Cargo.lock',
     'guest/protocol/Cargo.toml', 'guest/adapters/Cargo.toml', 'guest/supervisor/Cargo.toml',
-    'guest/protocol/src', 'guest/supervisor/src', 'guest/adapters/src', 'tests/HavenboxCoreTests',
-    'tests/WorkspaceStoreTests', 'tests/RuntimeTests',
+    'guest/protocol/src', 'guest/supervisor/src', 'guest/adapters/src', 'guest/image',
     'guest/csv-engine/Cargo.toml', 'guest/csv-engine/src', 'guest/csv-engine/tests',
-    'guest/csv-engine/schema.json',
+    'guest/csv-engine/schema.json', 'tests/HavenboxCoreTests',
+    'tests/WorkspaceStoreTests', 'tests/RuntimeTests', 'tests/RuntimeIntegration',
     'tests/generate-header-vectors.py', 'contracts/header-vectors.tsv',
 )
 
@@ -30,7 +30,10 @@ def source_snapshot():
     for entry in SNAPSHOT_PATHS:
         path = ROOT / entry
         candidates = sorted(path.rglob('*')) if path.is_dir() else [path]
-        paths.extend(p for p in candidates if p.is_file())
+        paths.extend(
+            p for p in candidates
+            if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"
+        )
     paths = sorted(set(paths))
     relative = [str(path.relative_to(ROOT)) for path in paths]
     payload = b''.join(

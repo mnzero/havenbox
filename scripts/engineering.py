@@ -87,7 +87,7 @@ def checks():
         run(binary, '--version')
         for args in [[], ['--validation-grant', 'untrusted'], ['--release']]:
             result = subprocess.run([str(binary), *args], capture_output=True, text=True)
-            if result.returncode != 78 or 'not implemented' not in result.stderr:
+            if result.returncode != 78 or not any(text in result.stderr for text in ['not implemented', 'no process started']):
                 raise RuntimeError(f'{binary}: expected explicit unavailable exit 78')
 
 

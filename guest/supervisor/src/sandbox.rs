@@ -1,5 +1,6 @@
 //! Linux-only namespace construction, callable only in a fresh single-threaded child.
-//! No product launch path calls this yet. A syscall failure must terminate that child.
+//! Only the fixed HB-11 synthetic path calls this; product admission remains closed.
+//! A syscall failure must terminate that child.
 use crate::{Boundary, Error};
 
 #[cfg(target_os = "linux")]
@@ -7,6 +8,7 @@ mod linux {
     use super::*;
     use crate::Role;
     use std::ffi::{CString, c_char, c_int, c_ulong, c_void};
+    use std::os::unix::fs::MetadataExt;
     unsafe extern "C" {
         fn unshare(flags: c_int) -> c_int;
         fn mount(
@@ -58,7 +60,8 @@ mod linux {
             )
         })
     }
-    fn bind(source: &str, target: &str, readonly: bool) -> Result<(), Error> {
+    fn bind(source: &str, target: &str, readonly: bool, owner: u32) -> Result<(), Error> {
+        validate_source(source, readonly, owner)?;
         mount_at(source, target, "", 4096, "")?;
         // Remount with nosuid,nodev; noexec for task data, including writable outputs.
         mount_at(
@@ -69,6 +72,35 @@ mod linux {
             "",
         )
     }
+    fn validate_source(source: &str, readonly: bool, owner: u32) -> Result<(), Error> {
+        let path = std::path::Path::new(source);
+        if !path.is_absolute() || path.canonicalize().map_err(crate::io)? != path {
+            return Err(Error::Boundary);
+        }
+        let mut current = std::path::PathBuf::from("/");
+        let components: Vec<_> = path.components().skip(1).collect();
+        for (index, component) in components.iter().enumerate() {
+            current.push(component);
+            let metadata = std::fs::symlink_metadata(&current).map_err(crate::io)?;
+            if metadata.file_type().is_symlink() || !metadata.is_dir() {
+                return Err(Error::Boundary);
+            }
+            let leaf = index + 1 == components.len();
+            if !leaf && (metadata.uid() != 0 || metadata.mode() & 0o022 != 0) {
+                return Err(Error::Boundary);
+            }
+            if leaf {
+                if readonly {
+                    if metadata.uid() != 0 || metadata.mode() & 0o222 != 0 {
+                        return Err(Error::Boundary);
+                    }
+                } else if metadata.uid() != owner || metadata.mode() & 0o077 != 0 {
+                    return Err(Error::Boundary);
+                }
+            }
+        }
+        Ok(())
+    }
     pub fn enter(boundary: &Boundary) -> Result<(), Error> {
         boundary.validate()?;
         if unsafe { geteuid() } != 0 {
@@ -76,34 +108,56 @@ mod linux {
         }
         // Namespace and chroot setup assumes a trusted immutable image layout.
         // Do not derive source paths from a session ID or wire message.
-        for path in [
-            "/run/hb-sandbox",
-            "/opt/havenbox/sandbox-root",
-            "/data/active",
-        ] {
+        let sandbox_root = match boundary.role {
+            Role::Harness => "/opt/havenbox/sandbox-harness",
+            Role::Worker => "/opt/havenbox/sandbox-worker",
+        };
+        for path in ["/run/hb-sandbox", sandbox_root, "/data/active"] {
             let p = std::path::Path::new(path);
             if p.canonicalize().map_err(crate::io)? != p {
+                return Err(Error::Boundary);
+            }
+            let metadata = std::fs::symlink_metadata(p).map_err(crate::io)?;
+            if metadata.file_type().is_symlink()
+                || !metadata.is_dir()
+                || metadata.uid() != 0
+                || metadata.mode() & 0o022 != 0
+            {
                 return Err(Error::Boundary);
             }
         }
         checked(unsafe { unshare(0x00020000 | 0x40000000 | 0x08000000) })?; // mount, net, IPC
         mount_at("", "/", "", (1 << 18) | 16384, "")?; // private recursive propagation
-        mount_at(
-            "/opt/havenbox/sandbox-root",
-            "/run/hb-sandbox",
-            "",
-            4096,
-            "",
-        )?;
+        mount_at(sandbox_root, "/run/hb-sandbox", "", 4096, "")?;
         mount_at("", "/run/hb-sandbox", "", 4096 | 32 | 1 | 2 | 4, "")?;
         match boundary.role {
             Role::Harness => {
-                bind("/data/active/context", "/run/hb-sandbox/context", true)?;
-                bind("/data/active/history", "/run/hb-sandbox/history", false)?;
+                bind(
+                    "/data/active/context",
+                    "/run/hb-sandbox/context",
+                    true,
+                    boundary.uid,
+                )?;
+                bind(
+                    "/data/active/history",
+                    "/run/hb-sandbox/history",
+                    false,
+                    boundary.uid,
+                )?;
             }
             Role::Worker => {
-                bind("/data/active/input", "/run/hb-sandbox/input", true)?;
-                bind("/data/active/output", "/run/hb-sandbox/output", false)?;
+                bind(
+                    "/data/active/input",
+                    "/run/hb-sandbox/input",
+                    true,
+                    boundary.uid,
+                )?;
+                bind(
+                    "/data/active/output",
+                    "/run/hb-sandbox/output",
+                    false,
+                    boundary.uid,
+                )?;
             }
         }
         mount_at(

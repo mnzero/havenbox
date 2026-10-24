@@ -15,7 +15,7 @@
 
 ## HB-09 候选开发工程
 
-已提供 SwiftUI 信息窗口、Swift 核心/header 预检与 helper 可执行体、Rust guest workspace（protocol/supervisor/adapters）。**不是可执行产品**：已有独立宿主 SQLite 存储模块与真实数据库回归，但尚未接入产品 UI；无 VM、推理或文件处理，helper/supervisor 仅 `--version` 成功，其余参数明确退出 78；不签发 ValidationRunGrant，也不授予普通组合运行资格。
+已提供 SwiftUI 信息窗口、Swift 核心、helper 和 Rust guest workspace。HB-11 的固定 synthetic validation profile 已在真实 QEMU/HVF guest 中闭环；它仍不是普通用户产品入口，也不包含真实 harness、模型、MCP 或文件导入。ValidationRunGrant 与普通组合资格保持关闭。
 
 ### 固定构建环境与命令
 
@@ -36,9 +36,9 @@ CI 使用固定 SHA 的 checkout action，并显式 checkout 事件 SHA（`githu
 
 ### HB-11 inspect-boot 候选检查
 
-`guest/target/release/hb-supervisor --inspect-boot` 只读取启动拓扑，不启动任务；非 Linux 明确返回 78。Linux 候选 parser 要求完整的 `/`、`/data`、`/proc`、`/sys`、`/dev`、`/dev/pts`、`/sys/fs/cgroup`、`/tmp` 固定挂载集合，具体文件系统/选项见 `BOOT_MOUNTS`；拒绝任何额外挂载（包括 `/context` tmpfs 和 `/share` fuse.sshfs）、subtree root、重复覆盖、错误父节点、未知格式/传播字段及 major/minor 漂移。网络清单只能是 `lo`，完整 block 清单只能是 `vda=254:0`、`vdb=254:16`（多余未挂载盘/分区也拒绝）。这是待正式镜像验证的保守候选 profile，不是已验证 Linux 拓扑或完整硬件设备认证，不能据此授予执行资格。
+`hb-supervisor --inspect-boot` 只读取启动拓扑，不启动任务；非 Linux 明确返回 78。固定 guest profile 已按真实 Alpine kernel 拓扑校准并在额外块设备场景 fail closed，但它仍不是通用硬件认证或执行资格。
 
-本轮 `hb11-candidate-1` 将 RuntimeTests 纳入内容绑定；旧候选证据不能沿用。正式 launchd/timer/transport/cgroup admission/超限 kill 尚未接通，普通资格和 ValidationRunGrant 保持关闭，详见 [HB-11 修复与阻塞记录](doc/verification/HB-11.md)。
+`hb11-candidate-16` 已真实运行三条 virtio-serial 通道、单调 host/guest lease、cgroup-before-exec、namespace/chroot/降权、固定 seccomp、角色文件隔离、每流 1 MiB 上限和正常/强杀清理。复用入口见 [HB-02 本地资产](doc/runbooks/hb02-local-vm-assets.md) 与 [HB-11 真实复验](doc/runbooks/hb11-real-runtime.md)。剩余边界包括 sibling UTM frameworks 的逐文件绑定、各类 cgroup/quota 分项超限、真实 harness/模型组合和 HB-31/32/33；详见 [HB-11 验证记录](doc/verification/HB-11.md)。
 
 ## HB-08 候选契约检查
 

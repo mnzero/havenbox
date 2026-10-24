@@ -37,6 +37,57 @@ struct ProtocolTests {
         _ = try TaskID("task_1")
         _ = try CallID("call_1")
         _ = try FileVersionID("file_1")
+        let request = UUID(uuidString: "01010101-0101-0101-0101-010101010101")!
+        let hello = try RuntimeFrame(channel: .control, epoch: 7, request: request,
+                                     payload: Data(#"{"type":"Hello","instance":"run"}"#.utf8),
+                                     direction: .hostToGuest)
+        let decoded = try RuntimeFrame(headerBytes: Array(hello.data.prefix(ProtocolHeader.byteCount)),
+                                       payload: hello.data.dropFirst(ProtocolHeader.byteCount),
+                                       expectedEpoch: 7, direction: .hostToGuest)
+        try check(decoded == hello, "full frame round trip")
+        var bad = hello.payload
+        bad[bad.startIndex] ^= 1
+        do {
+            _ = try RuntimeFrame(headerBytes: hello.header.bytes, payload: bad,
+                                 expectedEpoch: 7, direction: .hostToGuest)
+            throw TestFailure(message: "accepted bad payload hash")
+        } catch RuntimeFrameError.hash { count += 1 }
+        do {
+            _ = try RuntimeFrame(channel: .control, epoch: 7, request: UUID(),
+                                 payload: Data(#"{"type":"Hello","type":"Stop"}"#.utf8),
+                                 direction: .hostToGuest)
+            throw TestFailure(message: "accepted duplicate JSON key")
+        } catch RuntimeFrameError.duplicateJSONKey { count += 1 }
+        do {
+            _ = try RuntimeFrame(channel: .control, epoch: 7, request: UUID(),
+                                 payload: Data(#"{"type":"HelloAck"}"#.utf8),
+                                 direction: .hostToGuest)
+            throw TestFailure(message: "accepted wrong message direction")
+        } catch RuntimeFrameError.direction { count += 1 }
+        let nested = Data((#"{"type":"Hello","value":"# + String(repeating: "[", count: 65)
+            + String(repeating: "]", count: 65) + "}").utf8)
+        do {
+            _ = try RuntimeFrame(channel: .control, epoch: 7, request: UUID(),
+                                 payload: nested, direction: .hostToGuest)
+            throw TestFailure(message: "accepted excessively nested JSON")
+        } catch RuntimeFrameError.json { count += 1 }
+        var registry = try RuntimeRequestRegistry(maximum: 2)
+        try registry.registerLocal(request)
+        try registry.acceptRemote(
+            RuntimeFrame(channel: .control, epoch: 7, request: request,
+                         payload: Data(#"{"type":"HelloAck"}"#.utf8),
+                         direction: .guestToHost),
+            respondsToLocal: true
+        )
+        do {
+            try registry.acceptRemote(
+                RuntimeFrame(channel: .control, epoch: 7, request: request,
+                             payload: Data(#"{"type":"HelloAck"}"#.utf8),
+                             direction: .guestToHost),
+                respondsToLocal: true
+            )
+            throw TestFailure(message: "accepted unknown/replayed response")
+        } catch RuntimeFrameError.request { count += 1 }
         do {
             try EngineeringBuild.requireExecution()
         } catch EngineeringBuild.Failure.runtimeNotImplemented { count += 1 }

@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+role=${1:-}
+test_case=${2:-normal}
+case "$test_case" in
+    output-overflow)
+        count=0
+        while [ "$count" -lt 20000 ]; do
+            printf '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n'
+            count=$((count + 1))
+        done
+        exit 30
+        ;;
+    hold)
+        while :; do :; done
+        ;;
+    normal) ;;
+    *) exit 31 ;;
+esac
+for forbidden in /data /sessions /worker /dev; do
+    [ ! -e "$forbidden" ] || exit 20
+done
+
+case "$role" in
+    harness)
+        [ -r /context/probe.txt ] || exit 21
+        [ ! -e /input ] || exit 22
+        if printf forbidden >/context/probe.txt; then exit 23; fi
+        IFS= read -r original </context/probe.txt || exit 28
+        [ "$original" = synthetic-context ] || exit 28
+        printf harness-ok >/history/probe.out
+        ;;
+    worker)
+        [ -r /input/probe.txt ] || exit 24
+        [ ! -e /context ] && [ ! -e /history ] || exit 25
+        if printf forbidden >/input/probe.txt; then exit 26; fi
+        IFS= read -r original </input/probe.txt || exit 29
+        [ "$original" = synthetic-input ] || exit 29
+        printf worker-ok >/output/probe.out
+        ;;
+    *) exit 27 ;;
+esac
+
+printf scratch-ok >/tmp/probe.tmp
