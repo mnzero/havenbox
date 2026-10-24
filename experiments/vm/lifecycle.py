@@ -49,7 +49,9 @@ def terminate_group(pid):
     with contextlib.suppress(ProcessLookupError):
         os.killpg(pid, signal.SIGTERM)
     time.sleep(0.25)
-    with contextlib.suppress(ProcessLookupError):
+    # A sandboxed QEMU descendant can reject redundant SIGKILL after the
+    # process-group-wide SIGTERM has already taken effect.
+    with contextlib.suppress(ProcessLookupError, PermissionError):
         os.killpg(pid, signal.SIGKILL)
 
 
