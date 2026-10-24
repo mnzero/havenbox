@@ -1,0 +1,29 @@
+# Synthetic local protocol fixture only, never a production model route.
+default_model = "hb04"
+default_permission_mode = "manual"
+telemetry = false
+auto_session_title = false
+merge_all_available_skills = false
+builtin_product_skills = false
+
+[providers.hb04]
+type = "openai"
+base_url = "http://127.0.0.1:1/v1"
+api_key = "hb04-synthetic-not-a-credential"
+
+[models.hb04]
+provider = "hb04"
+model = "hb04-fixture"
+max_context_size = 32768
+capabilities = ["tool_use"]
+
+[loop_control]
+max_attempts_per_step = 1
+
+[tools]
+# Per official docs a nonempty unmatched allowlist exposes no tools.
+# Empty enabled=[] would mean unrestricted, NOT deny-all.
+enabled = ["HB04NoSuchTool"]
+
+[background]
+keep_alive_on_exit = false
