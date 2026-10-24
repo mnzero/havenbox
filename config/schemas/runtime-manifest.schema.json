@@ -184,7 +184,7 @@
           "const": "hb.channel.v1"
         },
         "databaseSchema": {
-          "const": "hb.store.v1-candidate"
+          "const": "hb.store.v2-candidate"
         }
       },
       "required": [

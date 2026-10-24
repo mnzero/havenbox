@@ -44,7 +44,32 @@ public actor WorkspaceStore {
         if version == "0" {
             try database.transaction {
                 try database.execute(WorkspaceSchema.sql + WorkspaceSchema.referenceGuards)
-                try database.execute("PRAGMA user_version=1")
+                try database.execute("PRAGMA user_version=\(WorkspaceSchema.version)")
+            }
+        } else if version == "1" {
+            do {
+                guard try database.query("SELECT id FROM maintenance_jobs WHERE kind='migration' AND state!='complete' LIMIT 1").isEmpty else {
+                    throw WorkspaceStoreError("Unfinished migration; restore verified backup")
+                }
+                guard try database.query("SELECT 1 FROM active_slot").isEmpty else {
+                    throw WorkspaceStoreError("Migration requires verified stopped turns")
+                }
+                let jobID = UUID().uuidString
+                let backup = directory.appendingPathComponent("schema-v1-\(jobID).db")
+                try database.backup(to: backup.path)
+                try database.query("INSERT INTO maintenance_jobs VALUES(?,'migration','backed-up',?,'running')", [jobID, backup.lastPathComponent])
+                try database.transaction {
+                    let columns = try database.query("PRAGMA table_info(compatibility_checks)").map { $0[1] ?? "" }
+                    if !columns.contains("sequence") {
+                        try database.execute(WorkspaceSchema.migrationV1ToV2)
+                    } else {
+                        try database.execute("UPDATE workspaces SET schema_version=2; PRAGMA user_version=2")
+                    }
+                    try database.query("UPDATE maintenance_jobs SET phase='committed',state='complete' WHERE id=?", [jobID])
+                }
+            } catch {
+                maintenanceError = "Schema migration failed; history only: \(error)"
+                try database.becomeReadOnly()
             }
         } else if version != String(WorkspaceSchema.version) {
             try database.becomeReadOnly()
@@ -107,6 +132,37 @@ public actor WorkspaceStore {
     static func commandDigest(_ fields: [String]) -> String {
         let encoded = fields.map { "\($0.utf8.count):\($0)" }.joined()
         return SHA256.hash(data: Data(encoded.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Persists a redacted, immutable configuration revision. Secrets must be stored through CredentialStore.
+    public func saveConfiguration<T: Encodable>(objectID: String, kind: String, value: T) throws -> (revision: Int64, digest: String) {
+        let body = try ConfigurationValidator.canonicalJSON(value)
+        // Reject credential-bearing URL user-info before any configuration revision is persisted.
+        if body.range(of: #""endpoint":"[^\"]*@[^\"]*"#, options: .regularExpression) != nil { throw ConfigurationError.endpointRejected }
+        let digest = try ConfigurationValidator.digest(value)
+        return try database.transaction {
+            let revisionText = try database.query("SELECT COALESCE(MAX(revision),0)+1 FROM config_revisions WHERE object_id=?", [objectID]).first.flatMap { $0.first ?? nil } ?? "1"
+            let next = Int64(revisionText)!
+            try database.query("INSERT INTO config_revisions VALUES(?,?,?,?,?,?,?)", [UUID().uuidString, objectID, kind, String(next), "1", body, digest])
+            return (next, digest)
+        }
+    }
+
+    public func readConfiguration(objectID: String, revision: Int64? = nil) throws -> (revision: Int64, kind: String, body: String, digest: String) {
+        let row: [String?]
+        if let revision { row = try database.query("SELECT revision,kind,body,digest FROM config_revisions WHERE object_id=? AND revision=?", [objectID, String(revision)]).first ?? [] }
+        else { row = try database.query("SELECT revision,kind,body,digest FROM config_revisions WHERE object_id=? ORDER BY revision DESC LIMIT 1", [objectID]).first ?? [] }
+        guard row.count == 4, let rev=Int64(row[0]!), let kind=row[1], let body=row[2], let digest=row[3] else { throw WorkspaceStoreError("Configuration revision not found") }
+        return (rev, kind, body, digest)
+    }
+
+    /// Compatibility evidence is immutable and tied to the exact configuration digest.
+    public func saveCompatibilityCheck(_ check: CompatibilityCheck) throws {
+        _ = try database.transaction { try database.query("INSERT INTO compatibility_checks(id,combination_digest,suite_version,status,evidence_ref) VALUES(?,?,?,?,?)", [UUID().uuidString, check.digest, check.suiteVersion, check.status, check.evidenceReference]) }
+    }
+    public func compatibilityCheck(digest: String, suiteVersion: String) throws -> CompatibilityCheck? {
+        guard let row = try database.query("SELECT combination_digest,status,suite_version,evidence_ref FROM compatibility_checks WHERE combination_digest=? AND suite_version=? ORDER BY sequence DESC LIMIT 1", [digest, suiteVersion]).first else { return nil }
+        return CompatibilityCheck(digest: row[0]!, status: row[1]!, suiteVersion: row[2]!, evidenceReference: row[3]!)
     }
 
     public func backup(to destination: URL) throws {

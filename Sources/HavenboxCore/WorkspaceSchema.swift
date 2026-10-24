@@ -1,9 +1,9 @@
 // Host metadata only. File bytes, credentials and hidden reasoning never belong here.
 enum WorkspaceSchema {
-    static let version = 1
+    static let version = 2
     static let sql = """
     CREATE TABLE workspaces(id INTEGER PRIMARY KEY CHECK(id=1), epoch INTEGER NOT NULL CHECK(epoch>0), schema_version INTEGER NOT NULL, state TEXT NOT NULL);
-    INSERT INTO workspaces VALUES(1,1,1,'ready');
+    INSERT INTO workspaces VALUES(1,1,2,'ready');
     CREATE TABLE sessions(id TEXT PRIMARY KEY, title TEXT NOT NULL, binding_kind TEXT NOT NULL CHECK(binding_kind IN ('agent','toolsOnly')), recipe_revision TEXT, tool_policy_revision TEXT, state TEXT NOT NULL, updated_at INTEGER NOT NULL,
       CHECK((binding_kind='agent' AND recipe_revision IS NOT NULL AND tool_policy_revision IS NULL) OR (binding_kind='toolsOnly' AND recipe_revision IS NULL AND tool_policy_revision IS NOT NULL)));
     CREATE INDEX sessions_order ON sessions(state,updated_at,id);
@@ -29,7 +29,7 @@ enum WorkspaceSchema {
     CREATE TABLE tool_calls(id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES tasks ON DELETE CASCADE, step INTEGER NOT NULL CHECK(step>=0), attempt INTEGER NOT NULL CHECK(attempt>=0), arguments_digest TEXT NOT NULL, dispatch_state TEXT NOT NULL, state TEXT NOT NULL, result_ref TEXT, error_code TEXT, UNIQUE(task_id,step,attempt));
     CREATE TABLE harness_sessions(session_id TEXT PRIMARY KEY REFERENCES sessions ON DELETE CASCADE, harness_revision TEXT NOT NULL, native_id TEXT NOT NULL, checkpoint TEXT, restore_strategy TEXT NOT NULL);
     CREATE TABLE config_revisions(id TEXT PRIMARY KEY, object_id TEXT NOT NULL, kind TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision>0), schema_version INTEGER NOT NULL, body TEXT NOT NULL, digest TEXT NOT NULL, UNIQUE(object_id,revision));
-    CREATE TABLE compatibility_checks(id TEXT PRIMARY KEY, combination_digest TEXT NOT NULL, suite_version TEXT NOT NULL, status TEXT NOT NULL, evidence_ref TEXT NOT NULL);
+    CREATE TABLE compatibility_checks(sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, combination_digest TEXT NOT NULL, suite_version TEXT NOT NULL, status TEXT NOT NULL, evidence_ref TEXT NOT NULL);
     CREATE TABLE events(id TEXT PRIMARY KEY, workspace_epoch INTEGER NOT NULL CHECK(workspace_epoch>0), seq INTEGER NOT NULL CHECK(seq>0), session_id TEXT REFERENCES sessions ON DELETE CASCADE, turn_id TEXT REFERENCES turns ON DELETE CASCADE, type TEXT NOT NULL, payload TEXT NOT NULL, UNIQUE(workspace_epoch,seq));
     CREATE TABLE event_counters(epoch INTEGER PRIMARY KEY, next_seq INTEGER NOT NULL CHECK(next_seq>0));
     INSERT INTO event_counters VALUES(1,1);
@@ -42,6 +42,20 @@ enum WorkspaceSchema {
     CREATE TRIGGER immutable_config BEFORE UPDATE ON config_revisions BEGIN SELECT RAISE(ABORT,'immutable config'); END;
     CREATE TRIGGER immutable_compatibility BEFORE UPDATE ON compatibility_checks BEGIN SELECT RAISE(ABORT,'immutable evidence'); END;
     CREATE TRIGGER immutable_file BEFORE UPDATE OF object_key,sha256,size,provenance_id ON file_versions BEGIN SELECT RAISE(ABORT,'immutable file version'); END;
+    """
+
+    /// v1 databases used a compatibility_checks table without a durable sequence. Rebuild it
+    /// transactionally so evidence ordering remains monotonic and latest lookups are deterministic.
+    static let migrationV1ToV2 = """
+    DROP TRIGGER IF EXISTS immutable_compatibility;
+    ALTER TABLE compatibility_checks RENAME TO compatibility_checks_v1;
+    CREATE TABLE compatibility_checks(sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, combination_digest TEXT NOT NULL, suite_version TEXT NOT NULL, status TEXT NOT NULL, evidence_ref TEXT NOT NULL);
+    INSERT INTO compatibility_checks(id, combination_digest, suite_version, status, evidence_ref)
+      SELECT id, combination_digest, suite_version, status, evidence_ref FROM compatibility_checks_v1 ORDER BY rowid;
+    DROP TABLE compatibility_checks_v1;
+    CREATE TRIGGER immutable_compatibility BEFORE UPDATE ON compatibility_checks BEGIN SELECT RAISE(ABORT,'immutable evidence'); END;
+    UPDATE workspaces SET schema_version=2 WHERE id=1;
+    PRAGMA user_version=2;
     """
 
     static var referenceGuards: String {

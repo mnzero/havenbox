@@ -1,8 +1,8 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "main-hb11-hb13-candidate-1",
+  "revision": "hb16-candidate-3",
   "state": "candidate",
-  "sourceCommit": "958e354e8d91d72ff51e016c294551cb53b19ea3",
+  "sourceCommit": "edd3ca25de358e43411da0108c438fea6094ecd5",
   "platform": {
     "os": "macOS",
     "architecture": "arm64",
@@ -35,7 +35,7 @@
     "sharedDirectories": 0,
     "fallback": "none",
     "protocolVersion": "hb.channel.v1",
-    "databaseSchema": "hb.store.v1-candidate"
+    "databaseSchema": "hb.store.v2-candidate"
   },
   "csv": {
     "version": "hb.csv-policy.v1",
@@ -391,7 +391,7 @@
     {
       "id": "config/schemas/runtime-manifest.schema.json",
       "path": "config/schemas/runtime-manifest.schema.json",
-      "sha256": "6eb9e7060ad5039dda9f31f1ef0e17cf879383db96db5c29f24ce07465a81053"
+      "sha256": "01084804fb12609439d4241a01124de0a73a0e4e02006ce8184a904ac61a2484"
     },
     {
       "id": "config/schemas/validation-request.schema.json",
@@ -411,7 +411,7 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "9ce183d9a01c0c6cf732333b989680733f732a482c05d2a8f7dbcc8660bdbf08"
+      "sha256": "e8370afea995aee63074de91d2748e906c56709182baf6e7fcf3c4623ede92d1"
     },
     {
       "id": "contracts/protocol.md",
@@ -451,7 +451,7 @@
     {
       "id": "scripts/engineering.py",
       "path": "scripts/engineering.py",
-      "sha256": "0be3a04e0b6f93ca140f757707dae917c9e5bbef14f35fa441c74440b8265756"
+      "sha256": "7475b362bd91e3fbb05b19daf78c3a2c26d9403d6fc27bb111db78f63978c4b6"
     },
     {
       "id": "Sources/HavenboxCore/ProtocolHeader.swift",
@@ -490,8 +490,8 @@
     "HB11 UTM sibling frameworks are not individually manifest-bound; cgroup and project-quota limits are not all deliberately exhausted"
   ],
   "sourceSnapshot": {
-    "baseCommit": "958e354e8d91d72ff51e016c294551cb53b19ea3",
-    "sha256": "e88e0fc92dc07fd507631303131b9e6ea2d541fe18895f74e0276cf20e6edcd1",
+    "baseCommit": "edd3ca25de358e43411da0108c438fea6094ecd5",
+    "sha256": "604586a62f5da09566f172404e270ac117e03e6001543cfbf72b499cc9c0fbf1",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",
@@ -499,6 +499,7 @@
       "Sources/CSQLite/include/sqlite3.h",
       "Sources/CSQLite/sqlite3.c",
       "Sources/HavenboxApp/HavenboxApp.swift",
+      "Sources/HavenboxCore/Configuration.swift",
       "Sources/HavenboxCore/ProtocolHeader.swift",
       "Sources/HavenboxCore/RuntimeChannel.swift",
       "Sources/HavenboxCore/RuntimeFiles.swift",
@@ -545,6 +546,7 @@
       "guest/supervisor/src/sandbox.rs",
       "guest/supervisor/src/seccomp.rs",
       "scripts/engineering.py",
+      "tests/ConfigurationTests/ConfigurationTests.swift",
       "tests/HavenboxCoreTests/ProtocolTests.swift",
       "tests/RuntimeIntegration/RuntimeIntegration.swift",
       "tests/RuntimeTests/RuntimeTests.swift",

@@ -55,9 +55,9 @@ extension WorkspaceStore {
     }
 
     func failMigration(backup: URL) throws {
-        try rejects("migration rollback") { try migrate(to: 2, sql: "CREATE TABLE should_rollback(id TEXT); INSERT INTO absent VALUES(1);", backupURL: backup) }
+        try rejects("migration rollback") { try migrate(to: 3, sql: "CREATE TABLE should_rollback(id TEXT); INSERT INTO absent VALUES(1);", backupURL: backup) }
         try require(isReadOnly, "migration failure becomes read-only")
-        try require(try database.query("PRAGMA user_version")[0][0] == "1", "old schema retained")
+        try require(try database.query("PRAGMA user_version")[0][0] == "2", "old schema retained")
         try require(try database.query("SELECT name FROM sqlite_master WHERE name='should_rollback'").isEmpty, "DDL rolled back")
         try rejects("read-only database connection") { try database.execute("UPDATE sessions SET title='bad'") }
     }
@@ -80,7 +80,7 @@ extension WorkspaceStore {
     }
 
     func rejectActiveMigration(backup: URL) throws {
-        try rejects("active turn blocks migration") { try migrate(to: 2, sql: "CREATE TABLE never_created(id);", backupURL: backup) }
+        try rejects("active turn blocks migration") { try migrate(to: 3, sql: "CREATE TABLE never_created(id);", backupURL: backup) }
         try require(!FileManager.default.fileExists(atPath: backup.path), "active migration does not create backup")
     }
 
@@ -91,6 +91,40 @@ extension WorkspaceStore {
 }
 
 @main struct StorageTests {
+    static func migrationRegression(root: URL) async throws {
+        for fail in [false, true] {
+            let directory = root.appendingPathComponent(fail ? "v1-failed" : "v1-upgrade")
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            do {
+                guard let resolved = realpath(directory.path, nil) else { throw WorkspaceStoreError("fixture path") }
+                defer { free(resolved) }
+                let db = try WorkspaceDatabase(path: String(cString: resolved) + "/workspace.db")
+                let v1 = WorkspaceSchema.sql.replacingOccurrences(of: "sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE", with: "id TEXT PRIMARY KEY")
+                try db.execute(v1 + WorkspaceSchema.referenceGuards)
+                try db.execute("UPDATE workspaces SET schema_version=1; PRAGMA user_version=1;")
+                try db.execute("INSERT INTO compatibility_checks VALUES('old-pass','legacy','suite','passed','first'); INSERT INTO compatibility_checks VALUES('old-fail','legacy','suite','failed','second');")
+                if fail { try db.execute("CREATE TRIGGER block_migration BEFORE UPDATE ON workspaces BEGIN SELECT RAISE(ABORT,'fixture failure'); END;") }
+            }
+            var store: WorkspaceStore? = try WorkspaceStore(directory: directory)
+            if fail {
+                try require(await store!.isReadOnly, "v1 migration failure is read-only")
+                try require(try await store!.readEvents(epoch: 1).isEmpty, "history readable after failure")
+                store = nil
+                store = try WorkspaceStore(directory: directory)
+                try require(await store!.isReadOnly, "failed v1 migration remains read-only on reopen")
+            } else {
+                try require(await !store!.isReadOnly, "v1 upgrade writable")
+                try require(try await store!.compatibilityCheck(digest: "legacy", suiteVersion: "suite")?.status == "failed", "v1 rows retain insertion order")
+                try await store!.saveCompatibilityCheck(CompatibilityCheck(digest: "legacy", status: "passed", suiteVersion: "suite", evidenceReference: "new"))
+                store = nil
+                store = try WorkspaceStore(directory: directory)
+                try require(try await store!.compatibilityCheck(digest: "legacy", suiteVersion: "suite")?.evidenceReference == "new", "migrated sequence advances and survives reopen")
+                try await store!.integrity()
+            }
+        }
+        print("PASS v1 real SQLite migration, evidence ordering, reopen and failure read-only")
+    }
+
     static func main() async throws {
         if CommandLine.arguments.count == 3 && CommandLine.arguments[1] == "--second-writer" {
             do { _ = try WorkspaceStore(directory: URL(fileURLWithPath: CommandLine.arguments[2])); exit(1) }
@@ -105,6 +139,7 @@ extension WorkspaceStore {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         print("SQLite \(String(cString: sqlite3_libversion())) source \(String(cString: sqlite3_sourceid()))")
         print("Persistent test artifacts: \(root.path)")
+        try await migrationRegression(root: root)
         let workspace = root.appendingPathComponent("live")
         var store: WorkspaceStore? = try WorkspaceStore(directory: workspace)
         try await store!.createSession(id: "s", title: "source", recipeRevision: "r1", toolPolicyRevision: nil)
