@@ -168,7 +168,7 @@
 
 ### HB-10 实现工作空间存储与事务
 
-状态：未开始
+状态：进行中
 
 负责人：宿主核心
 
@@ -176,7 +176,7 @@
 
 需求：F11、F24、F25、F26、S19
 
-交付：`host/WorkspaceStore/`，技术方案 §6 的 schema、迁移、backup API、事件序号、命令去重、active_slot、context/provenance/pin 表。
+交付：`Sources/HavenboxCore/Workspace*.swift`（沿 HB-09 实际 Swift 工程替代规划路径 `host/WorkspaceStore/`），技术方案 §6 的 schema、迁移、backup API、事件序号、命令去重、active_slot、context/provenance/pin 表。候选实现与真实 SQLite 回归见 [HB-10 验证](verification/HB-10.md)；正式基线资格仍未冻结。
 
 验收：外键/CHECK/唯一约束真实生效；首次披露可在无 task 时落库，执行审批必须绑定 task 与计划；源会话 SET NULL 不删除目标文件引用；第二实例不能写；双击或重连不创建重复消息；事务中断不产生半条状态事件；WAL 备份可恢复，迁移失败保持只读且旧库可恢复。保存 `doc/verification/HB-10.md`。
 

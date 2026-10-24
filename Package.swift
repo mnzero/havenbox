@@ -10,7 +10,9 @@ let package = Package(
         .executable(name: "havenbox-helper", targets: ["HavenboxHelper"]),
     ],
     targets: [
-        .target(name: "HavenboxCore"),
+        .target(name: "CSQLite", exclude: ["NOTICE.md"], publicHeadersPath: "include",
+                cSettings: [.define("SQLITE_THREADSAFE", to: "1"), .define("SQLITE_OMIT_LOAD_EXTENSION")]),
+        .target(name: "HavenboxCore", dependencies: ["CSQLite"]),
         .executableTarget(name: "HavenboxApp", dependencies: ["HavenboxCore"]),
         .executableTarget(name: "HavenboxHelper", dependencies: ["HavenboxCore"]),
         .executableTarget(name: "HavenboxCoreTests", dependencies: ["HavenboxCore"], path: "tests/HavenboxCoreTests"),

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb09-candidate-2",
+  "revision": "hb10-candidate-1",
   "state": "candidate",
   "sourceCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
   "platform": {
@@ -411,7 +411,7 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "10a259c697976cba8db8b82c6d8c83e2c0b59c4ed34b1f13fd4ad6d5615e7f7d"
+      "sha256": "460001bdafb7f0e693993ee20141358c2d433a6dfb5d43db0c4d47e2ee9e2eb0"
     },
     {
       "id": "contracts/protocol.md",
@@ -441,7 +441,7 @@
     {
       "id": "Package.swift",
       "path": "Package.swift",
-      "sha256": "09224e37b5d2ccbf8f62d3784172f71320503fa3af09091f7114e5fefff1b520"
+      "sha256": "a5bbce2a69f06d674b91c7517aec0418c301b6bfbe6a1f2c4c97c273dbc5bf3d"
     },
     {
       "id": "guest/Cargo.lock",
@@ -451,7 +451,7 @@
     {
       "id": "scripts/engineering.py",
       "path": "scripts/engineering.py",
-      "sha256": "64b9d5dd55106fd7cc6e3d2fffd26b04ab6fae65a0ef644e9485f279b3a1aefd"
+      "sha256": "88c5d560b7c3c75518a8e2da0d919e7fc5361b76c5d933215257feecb7796b2d"
     },
     {
       "id": "Sources/HavenboxCore/ProtocolHeader.swift",
@@ -490,12 +490,20 @@
   ],
   "sourceSnapshot": {
     "baseCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
-    "sha256": "0dac46e7d1159529a18b887c673ceeb86a4843497b8a23f51677cab4490168f7",
+    "sha256": "71a212ee1f70fa7ad0cedc119534e0fdafda63a610657c769a385b142f85de25",
     "paths": [
       "Package.swift",
+      "Sources/CSQLite/NOTICE.md",
+      "Sources/CSQLite/include/module.modulemap",
+      "Sources/CSQLite/include/sqlite3.h",
+      "Sources/CSQLite/sqlite3.c",
       "Sources/HavenboxApp/HavenboxApp.swift",
       "Sources/HavenboxCore/ProtocolHeader.swift",
       "Sources/HavenboxCore/WireID.swift",
+      "Sources/HavenboxCore/WorkspaceDatabase.swift",
+      "Sources/HavenboxCore/WorkspaceSchema.swift",
+      "Sources/HavenboxCore/WorkspaceStore.swift",
+      "Sources/HavenboxCore/WorkspaceTransactions.swift",
       "Sources/HavenboxHelper/main.swift",
       "config/build-toolchain.json",
       "contracts/header-vectors.tsv",
@@ -509,6 +517,7 @@
       "guest/supervisor/src/main.rs",
       "scripts/engineering.py",
       "tests/HavenboxCoreTests/ProtocolTests.swift",
+      "tests/WorkspaceStoreTests/StorageTests.swift",
       "tests/generate-header-vectors.py"
     ]
   }
