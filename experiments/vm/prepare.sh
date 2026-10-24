@@ -121,7 +121,7 @@ for name, path in paths.items():
             raise SystemExit(f"blocked: missing sourceUrl/version/architecture/generationCommand for {name}")
     suffix = path.name.lower()
     fmt = ("tar.gz" if suffix.endswith(".tar.gz") else "cpio.gz" if suffix.endswith(".gz") else path.suffix.lstrip(".") or "raw")
-    items[name] = {"path": rel, "sourceUrl": source_url, "version": version, "architecture": arch, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "format": fmt, "bytes": path.stat().st_size, "generationCommand": generation}
+    items[name] = {"path": rel, "sourceUrl": source_url, "version": version, "architecture": arch, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "sha256Scope": "startup-initial" if name == "data" else "artifact", "format": fmt, "bytes": path.stat().st_size, "generationCommand": generation}
 obj = {"schemaVersion": "hb-02.vm-assets.v2", "generatedBy": "experiments/vm/prepare.sh", "generationCommand": "experiments/vm/prepare.sh", "assets": items}
 manifest.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n")
 print(json.dumps(obj, indent=2, sort_keys=True))

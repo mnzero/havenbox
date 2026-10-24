@@ -44,6 +44,14 @@ install -m 0644 "$work/kernel/lib/modules/6.18.58-0-virt/kernel/drivers/block/vi
     "$work/root/lib/modules/virtio_blk.ko.gz"
 install -m 0644 "$work/kernel/lib/modules/6.18.58-0-virt/kernel/drivers/firmware/qemu_fw_cfg.ko.gz" \
     "$work/root/lib/modules/qemu_fw_cfg.ko.gz"
+install -m 0644 "$work/kernel/lib/modules/6.18.58-0-virt/kernel/lib/crc/crc16.ko.gz" \
+    "$work/root/lib/modules/crc16.ko.gz"
+install -m 0644 "$work/kernel/lib/modules/6.18.58-0-virt/kernel/fs/mbcache.ko.gz" \
+    "$work/root/lib/modules/mbcache.ko.gz"
+install -m 0644 "$work/kernel/lib/modules/6.18.58-0-virt/kernel/fs/jbd2/jbd2.ko.gz" \
+    "$work/root/lib/modules/jbd2.ko.gz"
+install -m 0644 "$work/kernel/lib/modules/6.18.58-0-virt/kernel/fs/ext4/ext4.ko.gz" \
+    "$work/root/lib/modules/ext4.ko.gz"
 find "$work/root" -exec touch -h -t 202610240000 {} +
 
 (cd "$work/root" && find . -print | LC_ALL=C sort | cpio -o -H newc 2>/dev/null) | gzip -9n > "$output/initramfs-hb02"
@@ -63,12 +71,25 @@ url_mini, mini, url_kernel, kernel_apk, image, initrd, root_image, alpine_versio
 assets = {}
 def add(name, path, url, version, fmt, command):
     path = pathlib.Path(path).resolve()
-    assets[name] = {"path": path.relative_to(root).as_posix(), "bytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "format": fmt, "sourceUrl": url, "version": version, "architecture": "aarch64", "generationCommand": command}
+    assets[name] = {"path": path.relative_to(root).as_posix(), "bytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "sha256Scope": "artifact", "format": fmt, "sourceUrl": url, "version": version, "architecture": "aarch64", "generationCommand": command}
 add("minirootfs", mini, url_mini, alpine_version, "tar.gz", generation_command)
 add("kernelPackage", kernel_apk, url_kernel, kernel_version, "apk", generation_command)
 add("kernel", image, "generated://build-smoke-guest.sh", kernel_version, "raw", generation_command)
 add("initrd", initrd, "generated://build-smoke-guest.sh", alpine_version, "cpio.gz", generation_command)
 add("image", root_image, "generated://build-smoke-guest.sh", alpine_version, "raw", generation_command)
+payload = root / "assets/guest-payload.sh"
+payload_sha256 = hashlib.sha256(payload.read_bytes()).hexdigest()
+assets["payload"] = {
+    "path": payload.relative_to(root).as_posix(),
+    "bytes": payload.stat().st_size,
+    "sha256": payload_sha256,
+    "sha256Scope": "artifact",
+    "format": "sh",
+    "sourceUrl": "repository://experiments/vm/assets/guest-payload.sh",
+    "version": f"sha256:{payload_sha256}",
+    "architecture": "posix-sh",
+    "generationCommand": "checked-in source",
+}
 obj = {"schemaVersion": "hb-02.vm-assets.v2", "generatedBy": "experiments/vm/build-smoke-guest.sh", "generationCommand": "experiments/vm/build-smoke-guest.sh", "assets": assets}
 manifest.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n")
 print(manifest.read_text(), end="")

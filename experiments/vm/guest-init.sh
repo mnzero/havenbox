@@ -23,8 +23,13 @@ if [ "$root_source" != /dev/vda ]; then
     mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
     mount -t proc proc /proc
     mount -t sysfs sysfs /sys
+    mount -t tmpfs tmpfs /run
     insmod /lib/modules/virtio_blk.ko.gz || fail 'virtio-blk-module-load-failed'
     insmod /lib/modules/qemu_fw_cfg.ko.gz || fail 'qemu-fw-cfg-module-load-failed'
+    insmod /lib/modules/crc16.ko.gz || fail 'crc16-module-load-failed'
+    insmod /lib/modules/mbcache.ko.gz || fail 'mbcache-module-load-failed'
+    insmod /lib/modules/jbd2.ko.gz || fail 'jbd2-module-load-failed'
+    insmod /lib/modules/ext4.ko.gz || fail 'ext4-module-load-failed'
     for unused in 1 2 3 4 5; do
         [ -e /dev/vda ] && [ -e /dev/vdb ] && break
         sleep 1
@@ -36,6 +41,10 @@ if [ "$root_source" != /dev/vda ]; then
     newroot_options=$(awk '$2 == "/newroot" { print $4; exit }' /proc/mounts)
     [ "$newroot_source" = /dev/vda ] || fail 'root-device-is-not-vda'
     mount_has_option "$newroot_options" ro || fail 'root-mount-not-readonly'
+    mount -o move /dev /newroot/dev || fail 'dev-move-failed'
+    mount -o move /proc /newroot/proc || fail 'proc-move-failed'
+    mount -o move /sys /newroot/sys || fail 'sys-move-failed'
+    mount -o move /run /newroot/run || fail 'run-move-failed'
     exec switch_root /newroot /sbin/hb02-guest-init
 fi
 
