@@ -8,6 +8,20 @@ fn main() -> std::process::ExitCode {
         );
         return std::process::ExitCode::SUCCESS;
     }
-    eprintln!("Guest supervision is not implemented (HB-11); no process started.");
+    if args == ["--inspect-boot"] {
+        return match hb_supervisor::inspect_live_boot() {
+            Ok(()) => {
+                println!("HB-11 boot topology accepted; task admission remains closed");
+                std::process::ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("HB-11 boot rejected: {error:?}; no process started");
+                std::process::ExitCode::from(78)
+            }
+        };
+    }
+    eprintln!(
+        "Product supervision is not implemented: HB-11 candidate lacks validated image/transport/launchd integration; no process started."
+    );
     std::process::ExitCode::from(78)
 }

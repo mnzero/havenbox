@@ -56,6 +56,7 @@ def build(swift, sdk):
         ('havenbox-helper', 'Sources/HavenboxHelper/main.swift', False),
         ('core-tests', 'tests/HavenboxCoreTests/ProtocolTests.swift', True),
         ('storage-tests', 'tests/WorkspaceStoreTests/StorageTests.swift', True),
+        ('runtime-tests', 'tests/RuntimeTests/RuntimeTests.swift', True),
     ]:
         run(swift, *common, *(['-parse-as-library'] if parse else []), '-I', OUT,
             ROOT / source, OUT / 'libHavenboxCore.a', OUT / 'sqlite3.o', '-o', OUT / name)
@@ -69,6 +70,7 @@ def checks():
     run(sys.executable, 'tests/generate-header-vectors.py', '--check')
     run(OUT / 'core-tests')
     run(OUT / 'storage-tests')
+    run(OUT / 'runtime-tests')
     run('cargo', 'test', '--manifest-path', 'guest/Cargo.toml', '--locked', '--offline')
     for binary in [OUT / 'havenbox-helper', ROOT / 'guest/target/release/hb-supervisor']:
         run(binary, '--version')
