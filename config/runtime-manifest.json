@@ -1,8 +1,8 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb11-candidate-1",
+  "revision": "hb11-candidate-16",
   "state": "candidate",
-  "sourceCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
+  "sourceCommit": "614f818b361c202d04a28ae92300937b902af92d",
   "platform": {
     "os": "macOS",
     "architecture": "arm64",
@@ -104,42 +104,42 @@
     {
       "id": "qemu",
       "version": "10.0.12",
-      "sha256": null,
+      "sha256": "2e4246e82d3269b9453ce93cd38df99edd717bfbec721a152dc71e36f1d0ae29",
       "license": null,
       "sbom": null,
-      "source": "HB-02 UTM 5.0.8 framework; package binary hash/license review still pending",
+      "source": "HB-11 pinned launcher; fixed framework copy a7805d9c373c99038ce79addef9804dc7c849bb8f75cffb705e7a9e1e4b02a3e; UTM sibling framework inventory/SBOM pending",
       "status": "probe",
-      "evidence": "doc/verification/HB-02.md"
+      "evidence": "doc/verification/HB-11.md"
     },
     {
       "id": "qemu-img",
       "version": "10.0.12",
-      "sha256": null,
+      "sha256": "28741481ba33d8e6dc93e3a07e89b03bfbf87695db919ee71b3fc4d56e32f651",
       "license": null,
       "sbom": null,
-      "source": "HB-02 UTM 5.0.8 framework; package binary hash/license review still pending",
+      "source": "HB-11 pinned qemu-img launcher; fixed framework copy 123fdd935d9a065c58e039bd11f5804f2ce86f3375950c510307a5588d9ed9fa; UTM sibling framework inventory/SBOM pending",
       "status": "probe",
-      "evidence": "doc/verification/HB-02.md"
+      "evidence": "doc/verification/HB-11.md"
     },
     {
       "id": "linux-kernel",
-      "version": null,
-      "sha256": null,
+      "version": "6.18.58-r0",
+      "sha256": "849394914e6a93cc9bb17e901f445ce21fcd7e4528541d9496a74d6a6ccee319",
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
+      "source": "HB-02 reviewed Alpine linux-virt 6.18.58-r0 package; HB-11 cache-only image build",
+      "status": "probe",
+      "evidence": "doc/verification/HB-11.md"
     },
     {
       "id": "guest-image",
-      "version": null,
-      "sha256": null,
+      "version": "Alpine 3.24.3 candidate",
+      "sha256": "8341f55d5ebe2d382b840a305343d1daf939c9b93610257750dd547c50cb8f7f",
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
+      "source": "HB-11 candidate-16 root image; initramfs/data/supervisor hashes in HB-11 evidence",
+      "status": "probe",
+      "evidence": "doc/verification/HB-11.md"
     },
     {
       "id": "node-runtime",
@@ -343,13 +343,13 @@
     },
     {
       "id": "supervisor",
-      "version": null,
-      "sha256": null,
+      "version": "0.1.0 hb11-candidate-16",
+      "sha256": "09384b5d609b16d574cb3713e2f94085d8c7391fecb4d3ead8724487f5094abf",
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
+      "source": "locked offline Rust build-std with Zig 0.17.0 AArch64 musl linker",
+      "status": "probe",
+      "evidence": "doc/verification/HB-11.md"
     },
     {
       "id": "gateway",
@@ -411,12 +411,12 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "6ae44792f22880e4352544b7461941688b194003862661eda023082c0a88ddb6"
+      "sha256": "b4614712c1b104baff36e3d0aaf97540e544c9c813aa6ee28b104379f75800a8"
     },
     {
       "id": "contracts/protocol.md",
       "path": "contracts/protocol.md",
-      "sha256": "81faf7d112a216ff4b6e3e3830c076b6acd721d3c5130be5172d3d9bb9ee2693"
+      "sha256": "c2ea55e83ae581f779ac7df0f998082607754e90375c856177f15273bce67052"
     },
     {
       "id": "tests/contracts/test_baseline.py",
@@ -451,12 +451,12 @@
     {
       "id": "scripts/engineering.py",
       "path": "scripts/engineering.py",
-      "sha256": "1d23eb13c41377651ba55c433e43b2294ca3d872e42fa0300bfbb725239252a9"
+      "sha256": "3dead5e47bfcb4d5fc74ab5f5e13101ad64edcc3f78aedb239d16e2feb759bcc"
     },
     {
       "id": "Sources/HavenboxCore/ProtocolHeader.swift",
       "path": "Sources/HavenboxCore/ProtocolHeader.swift",
-      "sha256": "beca9fca03243896cbaa2ba2d89b872a9ae9ee7568682bf359eb1056d0235913"
+      "sha256": "121df1a611e4051c64b4e40a800c8c4bdcb3a0eb70a9b685333868c0649b7db9"
     },
     {
       "id": "Sources/HavenboxCore/WireID.swift",
@@ -466,12 +466,12 @@
     {
       "id": "guest/protocol/src/lib.rs",
       "path": "guest/protocol/src/lib.rs",
-      "sha256": "4f301f0001d5c8fd2e6f28012aa28d1105782ae184d3faddc4c860eeaef44727"
+      "sha256": "c44fe26cf78ad7b5586fd5c4ac28f17c7ee3019abaebfa8b9003bc5eebe7ea85"
     },
     {
       "id": "tests/HavenboxCoreTests/ProtocolTests.swift",
       "path": "tests/HavenboxCoreTests/ProtocolTests.swift",
-      "sha256": "708d687b1513cbccc9ddb1d1abe1faadacbd739ae3ac04827a31998b73b3ec47"
+      "sha256": "01b7ba0fe86363256499045f520b7ca497e65ae596d9296835d5e1dbeda6754d"
     },
     {
       "id": "tests/generate-header-vectors.py",
@@ -485,12 +485,13 @@
     "HB04/HB06 real guest protocol and patches pending",
     "HB05 guest isolation/context/bridge/recovery pending",
     "HB07 real model/GPU/offline combination missing",
-    "Exact build hashes, licenses, SBOM and SQLite WAL fix evidence missing",
-    "HB31 functional / HB32 security / HB33 release qualification pending"
+    "Remaining dependency licenses, complete SBOM and distribution approval missing",
+    "HB31 functional / HB32 security / HB33 release qualification pending",
+    "HB11 UTM sibling frameworks are not individually manifest-bound; cgroup and project-quota limits are not all deliberately exhausted"
   ],
   "sourceSnapshot": {
-    "baseCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
-    "sha256": "1c8195246f0e4bf39a422389c6a85826408401e1a085b856cd2f22dce4c893e2",
+    "baseCommit": "614f818b361c202d04a28ae92300937b902af92d",
+    "sha256": "722d9c1326febbf9d253b72458d6c0a77ce48d53755acf91d94ef60406a07a1b",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",
@@ -499,6 +500,8 @@
       "Sources/CSQLite/sqlite3.c",
       "Sources/HavenboxApp/HavenboxApp.swift",
       "Sources/HavenboxCore/ProtocolHeader.swift",
+      "Sources/HavenboxCore/RuntimeChannel.swift",
+      "Sources/HavenboxCore/RuntimeFiles.swift",
       "Sources/HavenboxCore/RuntimeManager.swift",
       "Sources/HavenboxCore/RuntimeWatchdog.swift",
       "Sources/HavenboxCore/WireID.swift",
@@ -513,14 +516,30 @@
       "guest/Cargo.toml",
       "guest/adapters/Cargo.toml",
       "guest/adapters/src/lib.rs",
+      "guest/image/aarch64-linux-musl-linker.sh",
+      "guest/image/build-image.sh",
+      "guest/image/build-supervisor.sh",
+      "guest/image/hb-init",
+      "guest/image/hb-synthetic-task",
+      "guest/image/initramfs-init",
+      "guest/image/normalize-ext4.py",
       "guest/protocol/Cargo.toml",
+      "guest/protocol/src/channel.rs",
+      "guest/protocol/src/json.rs",
       "guest/protocol/src/lib.rs",
+      "guest/protocol/src/sha256.rs",
       "guest/supervisor/Cargo.toml",
       "guest/supervisor/src/lib.rs",
       "guest/supervisor/src/main.rs",
+      "guest/supervisor/src/policy.rs",
+      "guest/supervisor/src/process.rs",
+      "guest/supervisor/src/quota.rs",
+      "guest/supervisor/src/runtime.rs",
       "guest/supervisor/src/sandbox.rs",
+      "guest/supervisor/src/seccomp.rs",
       "scripts/engineering.py",
       "tests/HavenboxCoreTests/ProtocolTests.swift",
+      "tests/RuntimeIntegration/RuntimeIntegration.swift",
       "tests/RuntimeTests/RuntimeTests.swift",
       "tests/WorkspaceStoreTests/StorageTests.swift",
       "tests/generate-header-vectors.py"

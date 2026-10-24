@@ -50,4 +50,7 @@ public struct RuntimeWatchdog {
     }
 }
 
-public enum RuntimeError: Error { case invalidConfiguration, invalidControl, assetRejected(String), unavailable(String) }
+public enum RuntimeError: Error {
+    case invalidConfiguration, invalidControl, assetRejected(String), unavailable(String)
+    case system(Int32), launchd(Int32)
+}

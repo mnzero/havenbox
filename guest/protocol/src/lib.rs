@@ -1,4 +1,12 @@
-//! Header preflight only: not a transport, payload decoder or authorization boundary.
+//! Complete hb.channel.v1 framing and admission checks.
+mod channel;
+mod json;
+mod sha256;
+
+pub use channel::{
+    Channel, ChannelQueue, Direction, Frame, FrameError, FrameReader, MessageKind, RequestRegistry,
+};
+
 pub const VERSION: u16 = 1;
 pub const HEADER_BYTES: usize = 68;
 
@@ -13,11 +21,13 @@ pub enum HeaderError {
     PayloadLimit,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Header {
-    pub channel: u8,
+    pub channel: Channel,
     pub epoch: u64,
+    pub request: [u8; 16],
     pub payload_length: u32,
+    pub payload_sha256: [u8; 32],
 }
 
 impl Header {
@@ -31,12 +41,7 @@ impl Header {
         if u16::from_be_bytes([bytes[4], bytes[5]]) != VERSION {
             return Err(HeaderError::Version);
         }
-        let limit = match bytes[6] {
-            1 => 65_536,
-            2 => 262_144,
-            3 => 4_194_304,
-            _ => return Err(HeaderError::Channel),
-        };
+        let channel = Channel::try_from(bytes[6]).map_err(|_| HeaderError::Channel)?;
         if bytes[7] != 0 {
             return Err(HeaderError::Flags);
         }
@@ -47,14 +52,30 @@ impl Header {
             return Err(HeaderError::Epoch);
         }
         let length = u32::from_be_bytes([bytes[32], bytes[33], bytes[34], bytes[35]]);
-        if length > limit {
+        if u64::from(length) > channel.payload_limit() {
             return Err(HeaderError::PayloadLimit);
         }
+        let request = bytes[16..32].try_into().expect("fixed header slice");
+        let payload_sha256 = bytes[36..68].try_into().expect("fixed header slice");
         Ok(Self {
-            channel: bytes[6],
+            channel,
             epoch,
+            request,
             payload_length: length,
+            payload_sha256,
         })
+    }
+
+    pub fn encode(&self) -> [u8; HEADER_BYTES] {
+        let mut bytes = [0; HEADER_BYTES];
+        bytes[..4].copy_from_slice(b"HBX1");
+        bytes[4..6].copy_from_slice(&VERSION.to_be_bytes());
+        bytes[6] = self.channel as u8;
+        bytes[8..16].copy_from_slice(&self.epoch.to_be_bytes());
+        bytes[16..32].copy_from_slice(&self.request);
+        bytes[32..36].copy_from_slice(&self.payload_length.to_be_bytes());
+        bytes[36..68].copy_from_slice(&self.payload_sha256);
+        bytes
     }
 }
 
