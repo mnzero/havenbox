@@ -1,6 +1,6 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb11-candidate-1",
+  "revision": "hb13-candidate-2",
   "state": "candidate",
   "sourceCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
   "platform": {
@@ -303,7 +303,7 @@
     },
     {
       "id": "csv-engine",
-      "version": null,
+      "version": "hb.csv-engine.v1-candidate",
       "sha256": null,
       "license": null,
       "sbom": null,
@@ -411,7 +411,7 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "6ae44792f22880e4352544b7461941688b194003862661eda023082c0a88ddb6"
+      "sha256": "ad39f1af91b3d25eb96adf26ba4c1657c5080c1dd4a3ced6cc689e7b6bb62c73"
     },
     {
       "id": "contracts/protocol.md",
@@ -421,7 +421,7 @@
     {
       "id": "tests/contracts/test_baseline.py",
       "path": "tests/contracts/test_baseline.py",
-      "sha256": "9e6294153d98f8c8d7be49720bde0c9132786b5ab69be79d09471f9edecbcf9d"
+      "sha256": "cba8064cdea5996e1c2ce142d6ea019f70562d656026bea2b5911bdd706c56a2"
     },
     {
       "id": "scripts/check-baseline.py",
@@ -446,12 +446,12 @@
     {
       "id": "guest/Cargo.lock",
       "path": "guest/Cargo.lock",
-      "sha256": "09e769937bd1923481b16097e5da6299c7eb9f388733034888b7aca6c3aa3522"
+      "sha256": "f97c6194015c020307b343d47c7225ec8d66cd279d71c0d0533c373c72ae111b"
     },
     {
       "id": "scripts/engineering.py",
       "path": "scripts/engineering.py",
-      "sha256": "1d23eb13c41377651ba55c433e43b2294ca3d872e42fa0300bfbb725239252a9"
+      "sha256": "9051ec8074ce15f04b4f6939c49ea18bd6ec8d319848142628da2f0cbcac1c63"
     },
     {
       "id": "Sources/HavenboxCore/ProtocolHeader.swift",
@@ -490,7 +490,7 @@
   ],
   "sourceSnapshot": {
     "baseCommit": "bd98c68c07e8be387cc81c1d1a843d3400554140",
-    "sha256": "1c8195246f0e4bf39a422389c6a85826408401e1a085b856cd2f22dce4c893e2",
+    "sha256": "e83f3990bac1fa4ff34fddeffdd5441c0676d0efc71abcaf4b0d94958c81d6dc",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",
@@ -513,6 +513,13 @@
       "guest/Cargo.toml",
       "guest/adapters/Cargo.toml",
       "guest/adapters/src/lib.rs",
+      "guest/csv-engine/Cargo.toml",
+      "guest/csv-engine/schema.json",
+      "guest/csv-engine/src/lib.rs",
+      "guest/csv-engine/src/spill.rs",
+      "guest/csv-engine/tests/acceptance.rs",
+      "guest/csv-engine/tests/allocator_regression.rs",
+      "guest/csv-engine/tests/spill_cancellation.rs",
       "guest/protocol/Cargo.toml",
       "guest/protocol/src/lib.rs",
       "guest/supervisor/Cargo.toml",

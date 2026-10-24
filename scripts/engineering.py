@@ -67,6 +67,17 @@ def checks():
     run(sys.executable, 'scripts/check-baseline.py')
     run(sys.executable, 'scripts/check-development-plan.py')
     run(sys.executable, 'tests/fixtures/csv/check.py')
+    # The independent fixture checker is not the engine; workspace cargo tests below
+    # must include the real HB-13 implementation and its unmodified HB-01 inputs.
+    metadata = run('cargo', 'metadata', '--manifest-path', 'guest/Cargo.toml',
+                   '--locked', '--offline', '--no-deps', '--format-version', '1',
+                   capture_output=True, text=True)
+    try:
+        package_names = {p['name'] for p in json.loads(metadata.stdout)['packages']}
+    except (ValueError, KeyError, TypeError) as error:
+        raise RuntimeError(f'Invalid cargo workspace metadata: {error}') from error
+    if 'hb-csv-engine' not in package_names:
+        raise RuntimeError('HB-13 CSV engine missing from workspace checks')
     run(sys.executable, 'tests/generate-header-vectors.py', '--check')
     run(OUT / 'core-tests')
     run(OUT / 'storage-tests')
