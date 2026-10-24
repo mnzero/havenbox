@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:havenbox:compatibility-matrix:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "hb.compatibility.v1"
+    },
+    "combinations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "harness": {
+            "enum": [
+              "builtin",
+              "kimi-cli",
+              "pi",
+              "dsh",
+              "pending"
+            ]
+          },
+          "adapterRevision": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          },
+          "toolPolicyRevision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "toolEntryPoints": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "mcp",
+                "cli"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "route": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "enum": [
+                  "local",
+                  "online"
+                ]
+              },
+              "providerRevision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "credentialVersion": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "protocol": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "modelId": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "endpointRevision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "resourceRevision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "runtimeRevision": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "templateDigest": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                ]
+              },
+              "quantization": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              }
+            },
+            "required": [
+              "mode",
+              "providerRevision",
+              "credentialVersion",
+              "protocol",
+              "modelId",
+              "endpointRevision",
+              "resourceRevision",
+              "runtimeRevision",
+              "templateDigest",
+              "quantization"
+            ],
+            "additionalProperties": false
+          },
+          "state": {
+            "enum": [
+              "candidate",
+              "probe",
+              "validated",
+              "frozen"
+            ]
+          },
+          "recovery": {
+            "const": "preview-summary-new-session-no-replay"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "object",
+            "properties": {
+              "functional": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "security": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "release": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              }
+            },
+            "required": [
+              "functional",
+              "security",
+              "release"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "harness",
+          "adapterRevision",
+          "toolPolicyRevision",
+          "toolEntryPoints",
+          "route",
+          "state",
+          "recovery",
+          "reason",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "combinations"
+  ],
+  "additionalProperties": false
+}

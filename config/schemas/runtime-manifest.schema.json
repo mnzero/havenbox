@@ -1,0 +1,515 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:havenbox:runtime-manifest:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "hb.runtime.v1"
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "enum": [
+        "candidate",
+        "probe",
+        "validated",
+        "frozen"
+      ]
+    },
+    "sourceCommit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "platform": {
+      "type": "object",
+      "properties": {
+        "os": {
+          "const": "macOS"
+        },
+        "architecture": {
+          "const": "arm64"
+        },
+        "minimumOSCandidate": {
+          "const": "14.0"
+        },
+        "minimumOSVerified": {
+          "type": "boolean"
+        },
+        "referenceMemoryGiB": {
+          "const": 16
+        },
+        "referenceHardware": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        }
+      },
+      "required": [
+        "os",
+        "architecture",
+        "minimumOSCandidate",
+        "minimumOSVerified",
+        "referenceMemoryGiB",
+        "referenceHardware"
+      ],
+      "additionalProperties": false
+    },
+    "distribution": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "internal-package"
+        },
+        "hvfEntitlement": {
+          "const": "com.apple.security.hypervisor"
+        },
+        "signing": {
+          "const": "preserve-runtime-entitlement-or-reviewed-adhoc"
+        },
+        "notarization": {
+          "const": false
+        },
+        "automaticUpdates": {
+          "const": false
+        }
+      },
+      "required": [
+        "kind",
+        "hvfEntitlement",
+        "signing",
+        "notarization",
+        "automaticUpdates"
+      ],
+      "additionalProperties": false
+    },
+    "sqlite": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "requiredFix": {
+          "const": "WAL-reset"
+        },
+        "upstreamReference": {
+          "const": "https://sqlite.org/releaselog/3_51_3.html"
+        },
+        "acceptance": {
+          "const": "exact-build-with-official-fix-evidence-and-WAL-regression"
+        },
+        "journalMode": {
+          "const": "WAL"
+        },
+        "synchronous": {
+          "const": "FULL"
+        },
+        "foreignKeys": {
+          "const": true
+        },
+        "backup": {
+          "const": "sqlite-backup-api"
+        }
+      },
+      "required": [
+        "version",
+        "requiredFix",
+        "upstreamReference",
+        "acceptance",
+        "journalMode",
+        "synchronous",
+        "foreignKeys",
+        "backup"
+      ],
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "accelerator": {
+          "const": "hvf"
+        },
+        "machine": {
+          "const": "virt"
+        },
+        "networkDevices": {
+          "const": 0
+        },
+        "sharedDirectories": {
+          "const": 0
+        },
+        "fallback": {
+          "const": "none"
+        },
+        "protocolVersion": {
+          "const": "hb.channel.v1"
+        },
+        "databaseSchema": {
+          "const": "hb.store.v1-candidate"
+        }
+      },
+      "required": [
+        "accelerator",
+        "machine",
+        "networkDevices",
+        "sharedDirectories",
+        "fallback",
+        "protocolVersion",
+        "databaseSchema"
+      ],
+      "additionalProperties": false
+    },
+    "csv": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": "hb.csv-policy.v1"
+        },
+        "moneyScale": {
+          "const": 2
+        },
+        "maxIntegerDigits": {
+          "const": 16
+        },
+        "numberPattern": {
+          "const": "-?(0|[1-9][0-9]{0,15})(\\.[0-9]{1,2})?"
+        },
+        "rounding": {
+          "const": "reject"
+        },
+        "overflow": {
+          "const": "reject-before-publish"
+        },
+        "comparison": {
+          "const": "exact-utf8-no-trim-no-casefold"
+        },
+        "order": {
+          "const": "input-order-stable"
+        },
+        "duplicateModes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "all_members",
+              "after_first"
+            ]
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "version",
+        "moneyScale",
+        "maxIntegerDigits",
+        "numberPattern",
+        "rounding",
+        "overflow",
+        "comparison",
+        "order",
+        "duplicateModes"
+      ],
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "csvFiles": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "csvFileBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "csvTotalBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cellBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "columns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previewRows": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previewBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "vmCPUs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "vmMemoryBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "vmDiskBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toolSteps": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "taskSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toolSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stdoutBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stderrBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contextTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requestBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requestsPerTurn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requestSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "concurrentRequests": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stopGraceSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cleanupFailureSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "workerMemoryBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "workerScratchBytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "aggregateGroups": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "csvFiles",
+        "csvFileBytes",
+        "csvTotalBytes",
+        "cellBytes",
+        "columns",
+        "previewRows",
+        "previewBytes",
+        "vmCPUs",
+        "vmMemoryBytes",
+        "vmDiskBytes",
+        "toolSteps",
+        "taskSeconds",
+        "toolSeconds",
+        "stdoutBytes",
+        "stderrBytes",
+        "contextTokens",
+        "outputTokens",
+        "requestBytes",
+        "requestsPerTurn",
+        "requestSeconds",
+        "concurrentRequests",
+        "stopGraceSeconds",
+        "cleanupFailureSeconds",
+        "workerMemoryBytes",
+        "workerScratchBytes",
+        "aggregateGroups"
+      ],
+      "additionalProperties": false
+    },
+    "recovery": {
+      "const": "preview-summary-new-session-no-replay"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          },
+          "sha256": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            ]
+          },
+          "license": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          },
+          "sbom": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "probe"
+            ]
+          },
+          "evidence": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "sha256",
+          "license",
+          "sbom",
+          "source",
+          "status",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "sha256"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "revision",
+    "state",
+    "sourceCommit",
+    "platform",
+    "distribution",
+    "sqlite",
+    "runtime",
+    "csv",
+    "limits",
+    "recovery",
+    "dependencies",
+    "contracts",
+    "unresolved"
+  ],
+  "additionalProperties": false
+}

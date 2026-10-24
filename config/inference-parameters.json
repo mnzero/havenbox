@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "hb.inference-parameters.v1",
+  "revision": "candidate-policy-1",
+  "status": "candidate",
+  "fields": {
+    "contextTokens": {
+      "supported": true,
+      "default": 8192,
+      "valueSchema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8192
+      }
+    },
+    "maxOutputTokens": {
+      "supported": true,
+      "default": 2048,
+      "valueSchema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2048
+      }
+    },
+    "temperature": {
+      "supported": false,
+      "default": 1,
+      "valueSchema": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 2
+      }
+    },
+    "reasoningEffort": {
+      "supported": false,
+      "default": "unsupported",
+      "valueSchema": {
+        "enum": [
+          "unsupported"
+        ]
+      }
+    }
+  },
+  "mutuallyExclusive": [
+    [
+      "temperature",
+      "reasoningEffort"
+    ]
+  ]
+}

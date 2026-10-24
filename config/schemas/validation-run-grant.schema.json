@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:havenbox:validation-run-grant:v1",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "hb.validation-grant.v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "binding": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "combinationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "datasetDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "routeDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "turnId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authorizationDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "notBefore": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expiresAt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "seconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "requests",
+        "inputTokens",
+        "outputTokens",
+        "bytes",
+        "toolCalls",
+        "seconds"
+      ],
+      "additionalProperties": false
+    },
+    "purpose": {
+      "const": "synthetic-validation-only"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "binding",
+    "combinationId",
+    "datasetDigest",
+    "routeDigest",
+    "epoch",
+    "sessionId",
+    "turnId",
+    "authorizationDigest",
+    "notBefore",
+    "expiresAt",
+    "limits",
+    "purpose"
+  ],
+  "additionalProperties": false
+}

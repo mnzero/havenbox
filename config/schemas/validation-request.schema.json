@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:havenbox:validation-request:v1",
+  "type": "object",
+  "properties": {
+    "combinationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "datasetDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "routeDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "turnId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authorizationDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reservation": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toolCalls": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "seconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "requests",
+        "inputTokens",
+        "outputTokens",
+        "bytes",
+        "toolCalls",
+        "seconds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "combinationId",
+    "datasetDigest",
+    "routeDigest",
+    "epoch",
+    "sessionId",
+    "turnId",
+    "authorizationDigest",
+    "reservation"
+  ],
+  "additionalProperties": false
+}
