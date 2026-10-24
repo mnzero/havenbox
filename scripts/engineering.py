@@ -40,16 +40,25 @@ def prepare():
 
 def build(swift, sdk):
     common = ['-sdk', sdk, '-target', 'arm64-apple-macosx14.0', '-swift-version', '6', '-warnings-as-errors']
-    run(swift, *common, '-emit-library', '-static', '-emit-module', '-module-name', 'HavenboxCore',
+    sqlite = ROOT / 'Sources/CSQLite'
+    source_hash = hashlib.sha3_256((sqlite / 'sqlite3.c').read_bytes()).hexdigest()
+    if source_hash != '32d5424f97e0a7fc5ed2f6335afbb58be4e0298bd7117a34e39d345ff13d859e':
+        raise RuntimeError('SQLite upstream source hash mismatch')
+    run('/usr/bin/clang', '-isysroot', sdk, '-target', 'arm64-apple-macosx14.0',
+        '-O2', '-DSQLITE_THREADSAFE=1', '-DSQLITE_OMIT_LOAD_EXTENSION', '-I', sqlite / 'include',
+        '-c', sqlite / 'sqlite3.c', '-o', OUT / 'sqlite3.o')
+    common += ['-I', sqlite / 'include']
+    run(swift, *common, '-enable-testing', '-emit-library', '-static', '-emit-module', '-module-name', 'HavenboxCore',
         '-emit-module-path', OUT / 'HavenboxCore.swiftmodule',
         *sorted((ROOT / 'Sources/HavenboxCore').glob('*.swift')), '-o', OUT / 'libHavenboxCore.a')
     for name, source, parse in [
         ('Havenbox', 'Sources/HavenboxApp/HavenboxApp.swift', True),
         ('havenbox-helper', 'Sources/HavenboxHelper/main.swift', False),
         ('core-tests', 'tests/HavenboxCoreTests/ProtocolTests.swift', True),
+        ('storage-tests', 'tests/WorkspaceStoreTests/StorageTests.swift', True),
     ]:
         run(swift, *common, *(['-parse-as-library'] if parse else []), '-I', OUT,
-            ROOT / source, OUT / 'libHavenboxCore.a', '-o', OUT / name)
+            ROOT / source, OUT / 'libHavenboxCore.a', OUT / 'sqlite3.o', '-o', OUT / name)
     run('cargo', 'build', '--manifest-path', 'guest/Cargo.toml', '--locked', '--offline', '--release')
 
 
@@ -59,6 +68,7 @@ def checks():
     run(sys.executable, 'tests/fixtures/csv/check.py')
     run(sys.executable, 'tests/generate-header-vectors.py', '--check')
     run(OUT / 'core-tests')
+    run(OUT / 'storage-tests')
     run('cargo', 'test', '--manifest-path', 'guest/Cargo.toml', '--locked', '--offline')
     for binary in [OUT / 'havenbox-helper', ROOT / 'guest/target/release/hb-supervisor']:
         run(binary, '--version')
