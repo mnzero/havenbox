@@ -1,0 +1,11 @@
+{
+  "runtime": "dsh",
+  "version": "0.2.1-rc.3",
+  "source": "https://github.com/deepseek-ai/deepseek-harness",
+  "commit": "22ddee3792402c3e70ec5f86a63c3e3e895a2f60",
+  "launcher": "runtime/bin/dsh",
+  "lockfile": "runtime/package-lock.json",
+  "launcherSha256": null,
+  "lockfileSha256": null,
+  "nodeRequirement": ">=24.9.0"
+}

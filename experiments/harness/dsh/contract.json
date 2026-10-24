@@ -1,0 +1,17 @@
+{
+  "adapterVersion": "hb06-dsh-probe-2",
+  "source": "https://github.com/deepseek-ai/deepseek-harness",
+  "commit": "22ddee3792402c3e70ec5f86a63c3e3e895a2f60",
+  "version": "0.2.1-rc.3",
+  "license": "MIT",
+  "nodeRequirement": ">=24.9.0",
+  "profile": "sdk-minimal",
+  "runtimeArtifactSha256": null,
+  "qualification": "blocked",
+  "wire": "newline-delimited JSON-RPC 2.0 over stdio",
+  "methods": ["initialize", "session/prompt", "session/resume", "session/wait", "session/working-directory/get", "session/working-directory/set", "shutdown"],
+  "notifications": ["session.event", "session.status", "user-question.cancelled", "subagent.started", "subagent.finished"],
+  "approval": {"method": "approval/request", "initializeFlag": "approvalRequests", "defaultOutcome": "rejected"},
+  "cancellation": "No session/cancel in pinned protocol; revoke gateway grant and terminate isolated runtime process group",
+  "recovery": "Rebuild from validated host history after reauthorization; never replay tool calls or approval outcomes"
+}
