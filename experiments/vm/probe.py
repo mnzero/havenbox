@@ -10,8 +10,10 @@ import select
 import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
+import uuid
 from pathlib import Path
 from typing import BinaryIO
 
@@ -185,6 +187,40 @@ def qemu_command(qemu: str, image: Path, data: Path, payload: Path, kernel: Path
             "-drive", f"if=virtio,format=raw,file={image},readonly=on", "-drive", f"if=virtio,format=raw,file={data},snapshot=off"]
 
 
+def await_guest_ready(proc: subprocess.Popen, token: str, timeout: float) -> None:
+    """Accept only a complete nonce response read from QEMU's serial stdout."""
+    deadline = time.monotonic() + timeout
+    pending = bytearray()
+    assert proc.stdout is not None
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise ValueError(f"QEMU exited before readiness: {proc.returncode}")
+        readable, _, _ = select.select([proc.stdout], [], [], 0.05)
+        if not readable:
+            continue
+        chunk = os.read(proc.stdout.fileno(), 4096)
+        if not chunk:
+            raise ValueError("QEMU serial closed before readiness")
+        pending.extend(chunk)
+        while b"\n" in pending:
+            line, _, remaining = pending.partition(b"\n")
+            pending = bytearray(remaining)
+            line = line.rstrip(b"\r")
+            # Prefix serial data so it can never impersonate the host readiness record.
+            print(f"guest: {line.decode(errors='replace')}", flush=True)
+            if line.startswith(b"HB02_GUEST_READY"):
+                if line != f"HB02_GUEST_READY {token}".encode():
+                    raise ValueError("invalid guest handshake")
+                try:
+                    proc.wait(timeout=0.1)
+                except subprocess.TimeoutExpired:
+                    return
+                raise ValueError(f"QEMU exited during readiness: {proc.returncode}")
+        if len(pending) > MAX_FRAME:
+            raise ValueError("guest serial line exceeds maximum")
+    raise ValueError("guest handshake timed out")
+
+
 def launch(args: argparse.Namespace) -> int:
     qemu = args.qemu or "qemu-system-aarch64"
     qemu_img = args.qemu_img or "qemu-img"
@@ -219,8 +255,9 @@ def launch(args: argparse.Namespace) -> int:
     except OSError as exc:
         reasons.append(f"QEMU unavailable: {exc}")
         version = None
-    if version is not None and version.returncode != 0:
-        reasons.append("QEMU version probe failed")
+    version_text = version.stdout.strip() if version is not None else ""
+    if version is not None and (version.returncode != 0 or not version_text):
+        reasons.append("QEMU version probe failed or returned empty output")
     try:
         image_info = subprocess.run([qemu_img, "info", "--output=json", str(image)], capture_output=True, text=True, check=False)
         data_info = subprocess.run([qemu_img, "info", "--output=json", str(data)], capture_output=True, text=True, check=False)
@@ -236,10 +273,47 @@ def launch(args: argparse.Namespace) -> int:
     if reasons:
         print(json.dumps({"result": "blocked", "reasons": reasons, "qemu": qemu}, indent=2), file=sys.stderr)
         return 3
+    token = args.instance_token or uuid.uuid4().hex
+    if len(token) != 32 or any(c not in "0123456789abcdef" for c in token):
+        raise ValueError("invalid instance token")
+    timeout = float(os.environ.get("HB02_START_TIMEOUT", "30"))
+    if not 0 < timeout <= 300:
+        raise ValueError("startup timeout must be in (0, 300] seconds")
     cmd = qemu_command(qemu, image, data, payload, kernel, initrd, args.memory, args.cpus)
-    print(json.dumps({"result": "launching", "qemu_version": version.stdout.splitlines()[0], "command": cmd,
+    cmd.extend(["-fw_cfg", f"name=opt/havenbox.nonce,string={token}"])
+    print(json.dumps({"result": "launching", "qemu_version": version_text.splitlines()[0] if version_text else None, "command": cmd,
                       "device_policy": {"network": "none", "root": "readonly", "shared_dirs": "none", "qmp": "none", "machine": "virt", "accel": "hvf", "guest_payload": str(payload)}}, indent=2), flush=True)
-    return subprocess.run(cmd, check=False).returncode
+    # Only serial stdout participates in readiness; stderr remains diagnostic output.
+    diagnostics = tempfile.TemporaryFile()  # noqa: SIM115 -- closed with child resources below
+    try:
+        proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=diagnostics)
+    except OSError:
+        diagnostics.close()
+        raise
+    try:
+        await_guest_ready(proc, token, timeout)
+        print(f"HB02_READY {token}", flush=True)
+        assert proc.stdout is not None
+        while chunk := proc.stdout.read(4096):
+            print(f"guest: {chunk.decode(errors='replace')}", flush=True)
+        return proc.wait()
+    except (OSError, ValueError) as exc:
+        print(f"blocked: {exc}", file=sys.stderr, flush=True)
+        return 3
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=0.25)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        if proc.stdout is not None:
+            proc.stdout.close()
+        diagnostics.seek(0)
+        for line in diagnostics:
+            print(f"qemu stderr: {line.decode(errors='replace').rstrip()}", flush=True)
+        diagnostics.close()
 
 
 def main() -> int:
@@ -253,6 +327,7 @@ def main() -> int:
     launch_parser.add_argument("--qemu-img")
     launch_parser.add_argument("--memory", default="1024M")
     launch_parser.add_argument("--cpus", type=int, default=2)
+    launch_parser.add_argument("--instance-token")
     args = parser.parse_args()
     return self_test() if args.command == "self-test" else launch(args)
 
