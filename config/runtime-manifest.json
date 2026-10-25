@@ -451,7 +451,7 @@
     {
       "id": "scripts/engineering.py",
       "path": "scripts/engineering.py",
-      "sha256": "7475b362bd91e3fbb05b19daf78c3a2c26d9403d6fc27bb111db78f63978c4b6"
+      "sha256": "54f2ededf9e22bf48319ec23359d101354997671d264265b4c7ece19642c1260"
     },
     {
       "id": "Sources/HavenboxCore/ProtocolHeader.swift",
@@ -491,7 +491,7 @@
   ],
   "sourceSnapshot": {
     "baseCommit": "edd3ca25de358e43411da0108c438fea6094ecd5",
-    "sha256": "604586a62f5da09566f172404e270ac117e03e6001543cfbf72b499cc9c0fbf1",
+    "sha256": "88dace01ebcaf45c07e026ff2b6d32c042c7b512b1054e8114863a8b1b3b1bb0",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",

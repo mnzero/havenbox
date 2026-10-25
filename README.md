@@ -17,6 +17,22 @@
 
 已提供 SwiftUI 信息窗口、Swift 核心、helper 和 Rust guest workspace。HB-11 的固定 synthetic validation profile 已在真实 QEMU/HVF guest 中闭环；它仍不是普通用户产品入口，也不包含真实 harness、模型、MCP 或文件导入。ValidationRunGrant 与普通组合资格保持关闭。
 
+### 主链测试门
+
+每个 HB 任务编码完成后先运行公共检查入口（报告目录必须全新）：
+
+```sh
+python3 scripts/test-environment.py --report-dir .build/test-environment/run-N
+# 显式允许不使用网络的宿主进程机制测试在 Seatbelt 外运行：
+python3 scripts/test-environment.py --host-process-tests --report-dir .build/test-environment/run-N-host
+# 当前精确地址过滤不可用：只验证 sandbox 后 blocked，不启动 harness 或宿主进程测试：
+python3 scripts/test-environment.py --loopback --report-dir .build/test-environment/run-N-loopback
+```
+
+默认及 `--loopback` 均拒绝全部网络；`--loopback` 不是启用本机协议 fixture 的许可，和 `--host-process-tests` 合用也会提前 blocked。独立门禁回归的 TCP fixture 仅验证受控的 127.0.0.1/本机 en0 地址可达性与 sandbox 拒绝，不代表真实 harness 的 loopback 隔离已可用。
+
+退出 `0` 为已覆盖检查通过，`1` 为失败，`2` 为仍有 blocked；不得把 `2` 当作产品验收通过。入口保留每条命令、版本、退出码与日志，清理私有 HOME/临时数据库/构建缓存，不安装依赖；真实 VM、Keychain、模型的前置条件与限制见 [测试环境验证](doc/verification/test-environment.md)。
+
 ### 固定构建环境与命令
 
 Apple Silicon macOS；预先准备 `config/build-toolchain.json` 的精确工具链：Apple Swift 6.3.3 (swiftlang-6.3.3.1.3)、Rust/Cargo 1.99.1 Homebrew 构建、Python 3.15.0、macOS SDK 26.5。构建脚本校验版本，缺失/不匹配直接失败，**不安装、不升级、不下载**。SDK 默认 `/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`；可通过 `SDKROOT` 指定同版本目录，通过 `HB_SWIFTC` 指定同版本编译器。macOS 14 仅部署目标，未验最低系统。

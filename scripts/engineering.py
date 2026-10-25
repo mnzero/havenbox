@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / '.build' / 'engineering'
+OUT = Path(os.environ.get('HB_BUILD_ROOT', ROOT / '.build' / 'engineering')).resolve()
+CARGO_OUT = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'guest/target')).resolve()
 LOCK = {}  # Loaded inside main's diagnostic exception boundary.
 
 
@@ -85,7 +86,7 @@ def checks():
     run(OUT / 'runtime-tests')
     run(OUT / 'configuration-tests')
     run('cargo', 'test', '--manifest-path', 'guest/Cargo.toml', '--locked', '--offline')
-    for binary in [OUT / 'havenbox-helper', ROOT / 'guest/target/release/hb-supervisor']:
+    for binary in [OUT / 'havenbox-helper', CARGO_OUT / 'release/hb-supervisor']:
         run(binary, '--version')
         for args in [[], ['--validation-grant', 'untrusted'], ['--release']]:
             result = subprocess.run([str(binary), *args], capture_output=True, text=True)
@@ -111,7 +112,7 @@ def package():
     # Host-native Rust binary is a development artifact, NOT a Linux guest image.
     native = destination / 'host-native-rust'
     native.mkdir()
-    shutil.copy2(ROOT / 'guest/target/release/hb-supervisor', native / 'hb-supervisor')
+    shutil.copy2(CARGO_OUT / 'release/hb-supervisor', native / 'hb-supervisor')
     for path in ['config/runtime-manifest.json', 'config/build-toolchain.json', 'guest/Cargo.lock']:
         shutil.copy2(ROOT / path, destination / Path(path).name)
     (destination / 'NOTICE.txt').write_text('Engineering only; no product execution or ValidationRunGrant issuer.\nNo VM, models, harness runtimes, Linux image, signing approval or redistribution qualification.\n')

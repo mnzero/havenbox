@@ -146,37 +146,16 @@ def cleanup_watcher(helper_pid: int, helper_pgid: int, child_info_file: Path) ->
     groups = {helper_pgid}
     if child_info is not None:
         groups.add(child_info[1])
-    # Also catch any probe group that was reparented before the metadata read.
-    groups.update(
-        int(row["pgid"])
-        for row in ps_snapshot()
-        if str(SELF) in str(row["command"])
-        and any(mode in str(row["command"]) for mode in ("--child", "--grandchild"))
-    )
+    # Only groups recorded by this invocation are owned by this watcher.
     for pgid in groups:
         cleanup_group(pgid)
     return 0
 
 
 def kill_process(process: subprocess.Popen[object]) -> None:
-    if alive(process.pid):
+    if process.poll() is None:
         process.kill()
     reap(process)
-
-
-def historical_cleanup() -> dict[str, object]:
-    before = sorted(probe_pids() - {os.getpid()})
-    killed = []
-    for pid in before:
-        try:
-            os.kill(pid, signal.SIGKILL)
-            killed.append(pid)
-        except ProcessLookupError:
-            pass
-    deadline = time.monotonic() + 3
-    while time.monotonic() < deadline and any(alive(pid) for pid in before):
-        time.sleep(0.05)
-    return {"matched_before": before, "killed": killed, "remaining_after": sorted(pid for pid in before if alive(pid))}
 
 
 def scenario(name: str) -> dict[str, object]:
@@ -188,6 +167,8 @@ def scenario(name: str) -> dict[str, object]:
         ui = subprocess.Popen([sys.executable, str(SELF), "--child"], start_new_session=True)
         helper_process = subprocess.Popen([sys.executable, str(SELF), "--helper", str(child_pid_file), str(lease), str(ui.pid)], start_new_session=True)
         watcher = None
+        ui_pgid = ui.pid
+        child_pgid = None
         try:
             for _ in range(100):
                 if child_pid_file.exists():
@@ -207,17 +188,18 @@ def scenario(name: str) -> dict[str, object]:
                 watcher = subprocess.Popen([sys.executable, str(SELF), "--watch", str(helper_process.pid), str(helper_pgid), str(child_pid_file)])
                 helper_process.kill()
                 reap(helper_process)
-                reap(watcher)
+                watcher.wait(timeout=8)
             elif name == "lease-expiry":
                 # Parent only expires the lease; helper must detect and exit naturally.
                 lease.write_text(str(time.time() - 1))
-                reap(helper_process)
+                helper_process.wait(timeout=8)
             else:
                 raise ValueError(name)
-            reap(helper_process)
-            reap(ui)
+            # Observe the mechanism before test teardown; reap() kills on timeout
+            # and would otherwise turn a broken lease/UI watcher into a pass.
+            helper_process.wait(timeout=8)
+            kill_process(ui)
             cleanup_group(ui_pgid)
-            cleanup_group(child_pgid)
             tracked = {ui.pid, helper_process.pid, child_pid}
             wait_gone(tracked)
             # Allow the group cleanup retry loop to settle before taking the
@@ -230,21 +212,25 @@ def scenario(name: str) -> dict[str, object]:
                 if int(row["pid"]) in tracked
                 or int(row["ppid"]) in tracked
                 or int(row["pgid"]) in {child_pgid, os.getpgid(ui.pid) if alive(ui.pid) else -1, os.getpgid(helper_process.pid) if alive(helper_process.pid) else -1}
-                or (str(SELF) in str(row["command"]) and any(mode in str(row["command"]) for mode in ("--child", "--grandchild")))
+                # Do not count or signal another concurrent probe's children.
             ]
             return {"scenario": name, "before": before, "after": after, "tracked_after": matching_after, "cleaned": wait_gone(tracked) and not matching_after}
         finally:
             kill_process(helper_process)
             kill_process(ui)
+            cleanup_group(ui_pgid)
+            info = read_process_info(child_pid_file)
+            if info is not None:
+                cleanup_group(info[1])
             if watcher is not None:
                 kill_process(watcher)
 
 
 def launchd_check() -> dict[str, object]:
-    lookup = subprocess.run(["/bin/zsh", "-lc", "command -v launchctl"], capture_output=True, text=True)
-    if lookup.returncode != 0:
+    available = Path('/bin/launchctl').is_file()
+    if not available:
         return {"status": "blocked", "launchctl_available": False, "job_registered": False, "job_unload_verified": False, "no_auto_restart_verified": False, "reason": "launchctl unavailable"}
-    return {"status": "blocked", "launchctl_available": True, "path": lookup.stdout.strip(), "job_registered": False, "job_unload_verified": False, "no_auto_restart_verified": False, "reason": "no formal product LaunchAgent plist/helper in workspace; availability is not job evidence"}
+    return {"status": "blocked", "launchctl_available": True, "path": "/bin/launchctl", "job_registered": False, "job_unload_verified": False, "no_auto_restart_verified": False, "reason": "mechanism probe does not register a job; run HB11 integration for actual launchd evidence"}
 
 
 def main() -> int:
@@ -265,9 +251,10 @@ def main() -> int:
         return cleanup_watcher(int(args.watch[0]), int(args.watch[1]), Path(args.watch[2]))
     if not args.probe:
         parser.error("use --probe")
-    cleanup = historical_cleanup()
+    # Never kill matching historical processes: they may belong to another run.
+    cleanup = {"status": "not-performed", "observed_before": sorted(probe_pids() - {os.getpid()}), "remaining_after": []}
     scenarios = [scenario(name) for name in ("ui-kill", "helper-kill", "lease-expiry")]
-    final_probe_pids = sorted(probe_pids() - {os.getpid()})
+    final_probe_pids = sorted({int(row["pid"]) for item in scenarios for row in item["tracked_after"]})
     result = {"historical_cleanup": cleanup, "launchd": launchd_check(), "scenarios": scenarios, "final_probe_pids": final_probe_pids}
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if not cleanup["remaining_after"] and not final_probe_pids and all(item["cleaned"] for item in scenarios) else 1

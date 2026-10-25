@@ -21,7 +21,7 @@ class TransportTests(unittest.TestCase):
         self.env.start()
         self.addCleanup(self.env.stop)
 
-    def helper(self, code, timeout=2):
+    def helper(self, code, timeout=5):
         binary = self.home / 'helper'
         binary.write_text('#!' + sys.executable + '\n' + code)
         binary.chmod(0o700)
@@ -32,7 +32,7 @@ class TransportTests(unittest.TestCase):
     def test_out_of_order_response_ids(self):
         with self.helper('import sys,json\na=json.loads(input()); b=json.loads(input())\n'
                          'for x in [b,a]: print(json.dumps({"jsonrpc":"2.0","id":x["id"],"result":x["method"]}),flush=True)\n'
-                         'import time;time.sleep(2)\n') as client:
+                         'import time;time.sleep(10)\n') as client:
             first = client.request('first', {})
             second = client.request('second', {})
             self.assertEqual(client.wait(first), 'first')

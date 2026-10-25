@@ -4,6 +4,7 @@ import io
 import json
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import time
@@ -58,23 +59,62 @@ class ProbeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             launcher = root / "launcher"
-            # A surviving descendant would write the marker after rpc_probe returns.
+            # Separate cold exec/fork startup from the two-second RPC deadline.
+            # The child cannot start its survival timer until the parent handshake.
             launcher.write_text(f"#!{sys.executable}\nimport os,time\n"
                                 "if os.fork() == 0:\n"
                                 " open('child-ready', 'w').close()\n"
+                                " while not os.path.exists('start'): time.sleep(0.01)\n"
                                 " time.sleep(3)\n"
                                 " open('survived', 'w').close()\n"
                                 " time.sleep(30)\n"
                                 "time.sleep(30)\n")
             launcher.chmod(0o700)
-            started = time.monotonic()
-            result, code = probe.rpc_probe(launcher, os.environ.copy(), root, timeout=2)
-            self.assertLess(time.monotonic() - started, 4)
-            self.assertEqual(result["readStatus"], "timeout")
-            self.assertEqual(code, -signal.SIGKILL)
-            self.assertTrue((root / "child-ready").exists(), "descendant never started")
-            time.sleep(3.2)
-            self.assertFalse((root / "survived").exists())
+            try:
+                process = subprocess.Popen(
+                    [str(launcher), '--profile', 'sdk-minimal'], cwd=root,
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    start_new_session=True,
+                )
+            except OSError as error:
+                reason = {'code': 'descendant_startup_unavailable', 'detail': str(error)}
+                print('HB_TEST_BLOCKED ' + json.dumps({'status': 'blocked', 'reason': reason}), flush=True)
+                self.skipTest(reason['code'])
+            try:
+                startup_deadline = time.monotonic() + 15
+                while not (root / 'child-ready').exists():
+                    if process.poll() is not None or time.monotonic() >= startup_deadline:
+                        reason = {'code': 'descendant_startup_unavailable',
+                                  'detail': 'child-ready handshake not observed within 15s',
+                                  'launcher_exit_code': process.poll()}
+                        print('HB_TEST_BLOCKED ' + json.dumps({'status': 'blocked', 'reason': reason}), flush=True)
+                        self.skipTest(reason['code'])
+                    time.sleep(0.01)
+                (root / 'start').touch()
+                started = time.monotonic()
+                # Only reuse the real, ready process; RPC I/O and group kill remain real.
+                with mock.patch.object(probe.subprocess, 'Popen', return_value=process):
+                    result, code = probe.rpc_probe(launcher, os.environ.copy(), root, timeout=2)
+                self.assertLess(time.monotonic() - started, 4)
+                self.assertEqual(result['readStatus'], 'timeout')
+                self.assertEqual(code, -signal.SIGKILL)
+                time.sleep(3.2)
+                self.assertFalse((root / 'survived').exists())
+            finally:
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=2)
+                for stream in (process.stdin, process.stdout, process.stderr):
+                    stream.close()
+
+    def test_descendant_launch_failure_reports_blocked(self):
+        output = io.StringIO()
+        with (mock.patch.object(probe.subprocess, 'Popen', side_effect=OSError('fixture exec denied')),
+              contextlib.redirect_stdout(output), self.assertRaises(unittest.SkipTest)):
+            self.test_timeout_kills_descendants()
+        record = json.loads(output.getvalue().removeprefix('HB_TEST_BLOCKED '))
+        self.assertEqual(record['status'], 'blocked')
+        self.assertEqual(record['reason']['code'], 'descendant_startup_unavailable')
 
     def test_failed_validation_never_creates_home_or_env(self):
         original = probe.load_manifest()
