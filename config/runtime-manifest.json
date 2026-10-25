@@ -468,7 +468,7 @@
     {
       "id": "guest/protocol/src/lib.rs",
       "path": "guest/protocol/src/lib.rs",
-      "sha256": "c44fe26cf78ad7b5586fd5c4ac28f17c7ee3019abaebfa8b9003bc5eebe7ea85"
+      "sha256": "59f88a0e3fb83c1ade373a99acd7ffc79e7a72dfd500976e9af849355ba944b4"
     },
     {
       "id": "tests/HavenboxCoreTests/ProtocolTests.swift",
@@ -488,7 +488,6 @@
   ],
   "unresolved": [
     "Minimum macOS and 16GiB reference hardware are not measured",
-    "MVP-02 real file boundary and VM task channel are not integrated",
     "MVP-03 Linux CSV/CLI executables, hashes and all five fixed CLI templates are incomplete",
     "MVP-04 builtin Agent and fixed inference gateway are not implemented or real-model verified",
     "Dependency licenses, complete SBOM and distribution approval are incomplete",
@@ -497,7 +496,7 @@
   ],
   "sourceSnapshot": {
     "baseCommit": "6e153b1837629020face30b1e6e0344d09abb172",
-    "sha256": "505eb3f151525f0397cea3ef1debcb34c503e396d4e5daaea7ca7cb5ec7bbfea",
+    "sha256": "ee0e108b7fc609ba237fcec96202f9c768c9b091aecb9024fb276cd98e77e73a",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",
@@ -539,6 +538,7 @@
       "guest/image/aarch64-linux-musl-linker.sh",
       "guest/image/build-image.sh",
       "guest/image/build-supervisor.sh",
+      "guest/image/deterministic-newc.py",
       "guest/image/hb-init",
       "guest/image/hb-synthetic-task",
       "guest/image/initramfs-init",
@@ -549,6 +549,8 @@
       "guest/protocol/src/lib.rs",
       "guest/protocol/src/sha256.rs",
       "guest/supervisor/Cargo.toml",
+      "guest/supervisor/src/aarch64_linux_open_flags.rs",
+      "guest/supervisor/src/file_runtime.rs",
       "guest/supervisor/src/lib.rs",
       "guest/supervisor/src/main.rs",
       "guest/supervisor/src/policy.rs",
@@ -557,6 +559,7 @@
       "guest/supervisor/src/runtime.rs",
       "guest/supervisor/src/sandbox.rs",
       "guest/supervisor/src/seccomp.rs",
+      "guest/supervisor/src/task_channel.rs",
       "scripts/engineering.py",
       "tests/ConfigurationTests/ConfigurationTests.swift",
       "tests/HavenboxCoreTests/ProtocolTests.swift",
