@@ -1,6 +1,6 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb16-candidate-3",
+  "revision": "hb14-candidate-2",
   "state": "candidate",
   "sourceCommit": "edd3ca25de358e43411da0108c438fea6094ecd5",
   "platform": {
@@ -313,13 +313,13 @@
     },
     {
       "id": "cli",
-      "version": null,
+      "version": "hb.cli.v2-candidate",
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
+      "source": "guest/cli deterministic CallPermit implementation; candidate only",
+      "status": "probe",
+      "evidence": "doc/verification/HB-14.md"
     },
     {
       "id": "sqlite",
@@ -411,7 +411,7 @@
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "e8370afea995aee63074de91d2748e906c56709182baf6e7fcf3c4623ede92d1"
+      "sha256": "7fcbf89ae54d5e08c150f8959a7700b780db1e4f102b223eada11aaba080ab47"
     },
     {
       "id": "contracts/protocol.md",
@@ -446,7 +446,7 @@
     {
       "id": "guest/Cargo.lock",
       "path": "guest/Cargo.lock",
-      "sha256": "f97c6194015c020307b343d47c7225ec8d66cd279d71c0d0533c373c72ae111b"
+      "sha256": "bf0afc852f0e534823a6cf421e3acfcc81ae434958e2f2b32e5d7b0cfe110dce"
     },
     {
       "id": "scripts/engineering.py",
@@ -491,7 +491,7 @@
   ],
   "sourceSnapshot": {
     "baseCommit": "edd3ca25de358e43411da0108c438fea6094ecd5",
-    "sha256": "88dace01ebcaf45c07e026ff2b6d32c042c7b512b1054e8114863a8b1b3b1bb0",
+    "sha256": "9315d5940cb2e33f957465a3e8c9ea6c6a2a7c2af40b5721b6254f63c9f75582",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",
@@ -512,11 +512,17 @@
       "Sources/HavenboxCore/WorkspaceTransactions.swift",
       "Sources/HavenboxHelper/main.swift",
       "config/build-toolchain.json",
+      "config/cli/template.json",
       "contracts/header-vectors.tsv",
       "guest/Cargo.lock",
       "guest/Cargo.toml",
       "guest/adapters/Cargo.toml",
       "guest/adapters/src/lib.rs",
+      "guest/cli/Cargo.toml",
+      "guest/cli/src/digest.rs",
+      "guest/cli/src/lib.rs",
+      "guest/cli/src/process.rs",
+      "guest/cli/src/tests.rs",
       "guest/csv-engine/Cargo.toml",
       "guest/csv-engine/schema.json",
       "guest/csv-engine/src/lib.rs",

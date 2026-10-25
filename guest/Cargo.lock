@@ -7,6 +7,13 @@ name = "hb-adapters"
 version = "0.1.0"
 
 [[package]]
+name = "hb-cli"
+version = "0.1.0"
+dependencies = [
+ "hb-csv-engine",
+]
+
+[[package]]
 name = "hb-csv-engine"
 version = "0.1.0"
 

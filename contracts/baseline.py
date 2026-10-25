@@ -20,7 +20,7 @@ SNAPSHOT_PATHS = (
     'tests/HavenboxCoreTests', 'tests/WorkspaceStoreTests', 'tests/RuntimeTests',
     'tests/RuntimeIntegration', 'tests/ConfigurationTests',
     'guest/csv-engine/Cargo.toml', 'guest/csv-engine/src', 'guest/csv-engine/tests',
-    'guest/csv-engine/schema.json',
+    'guest/csv-engine/schema.json', 'guest/cli', 'config/cli',
     'tests/generate-header-vectors.py', 'contracts/header-vectors.tsv',
 )
 

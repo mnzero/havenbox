@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "hb.cli.v2-candidate",
+  "tool": "csv-inspect",
+  "toolRevision": "hb.csv-engine.v1-candidate",
+  "executable": "/usr/local/lib/havenbox/csv-engine",
+  "argv": ["inspect", "--input", {"type": "FileId"}, "--format", {"enum": ["csv"]}, "--rows", {"integer": {"minimum": 1, "maximum": 200}}],
+  "cwd": "/workspace/task",
+  "environment": {},
+  "shell": false,
+  "network": false,
+  "result": {"schema": "csv-v1", "complete": true, "sha256": "host-approved", "provenance": "call-plan-inputs"},
+  "limits": {"totalBytes": 1048576, "timeoutMillis": 60000}
+}
