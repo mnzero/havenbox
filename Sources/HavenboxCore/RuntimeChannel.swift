@@ -26,7 +26,12 @@ public enum RuntimeMessageKind: String, Sendable {
     case event = "Event"
     case stopped = "Stopped"
     case readArtifact = "ReadArtifact"
+    case beginInput = "BeginInput"
     case fileChunk = "FileChunk"
+    case commitInput = "CommitInput"
+    case inputAccepted = "InputAccepted"
+    case commitArtifact = "CommitArtifact"
+    case artifactCommitted = "ArtifactCommitted"
     case inferenceRequest = "InferenceRequest"
     case inferenceResponse = "InferenceResponse"
     case cancel = "Cancel"
@@ -37,8 +42,11 @@ public enum RuntimeMessageKind: String, Sendable {
              (.control, .hostToGuest, .stop), (.control, .hostToGuest, .callPermit),
              (.control, .guestToHost, .helloAck), (.control, .guestToHost, .event),
              (.control, .guestToHost, .stopped),
-             (.file, .hostToGuest, .readArtifact), (.file, .hostToGuest, .fileChunk),
-             (.file, .guestToHost, .fileChunk),
+             (.file, .hostToGuest, .beginInput), (.file, .hostToGuest, .fileChunk),
+             (.file, .hostToGuest, .commitInput), (.file, .hostToGuest, .readArtifact),
+             (.file, .hostToGuest, .artifactCommitted),
+             (.file, .guestToHost, .fileChunk), (.file, .guestToHost, .inputAccepted),
+             (.file, .guestToHost, .commitArtifact),
              (.inference, .hostToGuest, .inferenceResponse),
              (.inference, .hostToGuest, .cancel),
              (.inference, .guestToHost, .inferenceRequest): true

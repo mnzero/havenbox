@@ -1,9 +1,10 @@
 import CryptoKit
+import Darwin
 import Foundation
 import HavenboxCore
 
 @main struct RuntimeTests {
-    static func main() throws {
+    static func main() async throws {
         let instance = UUID()
         var lease = try RuntimeWatchdog(instance: instance, epoch: 7, now: 0, ttl: 100)
         try lease.hello(instance: instance, epoch: 7, now: 1)
@@ -144,6 +145,284 @@ import HavenboxCore
             fatalError("hardlinked launch config accepted")
         } catch RuntimeError.assetRejected { }
 
-        print("HB-11: frame/lease/replay/FD pin/mode-drift/hardlink/fixed topology tests passed")
+        try await fileBoundaryTests()
+        print("HB-11/MVP-02: runtime and host file-boundary tests passed")
+    }
+
+    static func fileBoundaryTests() async throws {
+        let root = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".mvp02-" + UUID().uuidString)
+        let workspace = root.appendingPathComponent("workspace")
+        let sources = root.appendingPathComponent("sources")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false,
+                                                attributes: [.posixPermissions: 0o700])
+        try FileManager.default.createDirectory(at: sources, withIntermediateDirectories: false,
+                                                attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = try WorkspaceStore(directory: workspace)
+        try await store.createSession(id: "session_runtime", title: "Runtime",
+                                      recipeRevision: nil, toolPolicyRevision: "tools-v1")
+        let turnID = try await store.sendMessage(
+            sessionID: "session_runtime", commandID: "command_runtime", body: "process CSV"
+        )
+        let planDigest = String(repeating: "a", count: 64)
+        try await store.savePlan(id: "plan_runtime", revision: 1, turnID: turnID,
+                                 canonicalJSON: "{}", digest: planDigest)
+        let taskID = try await store.approveExecution(
+            commandID: "command_approve", turnID: turnID, planID: "plan_runtime", revision: 1,
+            digest: planDigest, snapshotJSON: "{}", expiresAt: Int64.max
+        )
+        let boundary = try HostFileBoundary(root: workspace, store: store,
+                                            maximumInputBytes: 32,
+                                            maximumOutputBytes: 32, chunkBytes: 4)
+        let source = sources.appendingPathComponent("input.csv")
+        let input = Data("a,b\n1,2\n".utf8)
+        try input.write(to: source)
+        let version = try await boundary.importCSV(from: source)
+        precondition(version.size == input.count)
+        precondition(version.sha256 == digest(input))
+        let storedVersion = try await boundary.persistedVersion(fileID: version.fileID)
+        precondition(storedVersion == version)
+        let storedInput = workspace.appendingPathComponent("files/input/\(version.fileID)")
+        let inputAttributes = try FileManager.default.attributesOfItem(atPath: storedInput.path)
+        let inputMode = inputAttributes[.posixPermissions] as! NSNumber
+        precondition(inputMode.intValue & 0o222 == 0)
+
+        let begin = try await boundary.beginInputFrame(for: version, epoch: 7, request: UUID())
+        precondition(begin.kind == .beginInput && begin.header.channel == .file)
+        var offset: UInt64 = 0
+        var transferred = Data()
+        while offset < version.size {
+            let chunk = try await boundary.inputChunk(
+                for: version, offset: offset, epoch: 7, request: UUID()
+            )
+            let object = try JSONSerialization.jsonObject(with: chunk.frame.payload) as! [String: Any]
+            precondition(object["type"] as? String == "FileChunk")
+            transferred.append(Data(base64Encoded: object["bytes"] as! String)!)
+            offset = chunk.nextOffset
+            precondition(chunk.frame.payload.count <= RuntimeChannel.file.payloadLimit)
+        }
+        precondition(transferred == input)
+        let commit = try await boundary.commitInputFrame(for: version, epoch: 7, request: UUID())
+        precondition(commit.kind == .commitInput)
+
+        let disguised = sources.appendingPathComponent("disguised.csv")
+        try Data("ordinary text\n".utf8).write(to: disguised)
+        do {
+            _ = try await boundary.importCSV(from: disguised)
+            fatalError("plain text disguised as CSV accepted")
+        } catch FileBoundaryError.invalidText { }
+
+        let inconsistent = sources.appendingPathComponent("inconsistent.csv")
+        try Data("a,b\n1,2,3\n".utf8).write(to: inconsistent)
+        do {
+            _ = try await boundary.importCSV(from: inconsistent)
+            fatalError("inconsistent CSV rows accepted")
+        } catch FileBoundaryError.invalidText { }
+
+        let oversized = sources.appendingPathComponent("oversized.csv")
+        try Data(repeating: 0x61, count: 33).write(to: oversized)
+        do {
+            _ = try await boundary.importCSV(from: oversized)
+            fatalError("oversized input accepted")
+        } catch RuntimeError.assetRejected { }
+
+        let directory = sources.appendingPathComponent("directory.csv")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        do {
+            _ = try await boundary.importCSV(from: directory)
+            fatalError("directory input accepted")
+        } catch RuntimeError.assetRejected { }
+
+        let linked = sources.appendingPathComponent("linked.csv")
+        try FileManager.default.createSymbolicLink(at: linked, withDestinationURL: source)
+        do {
+            _ = try await boundary.importCSV(from: linked)
+            fatalError("symbolic-link input accepted")
+        } catch RuntimeError.assetRejected { }
+
+        let hardlinked = sources.appendingPathComponent("hardlinked.csv")
+        try FileManager.default.linkItem(at: source, to: hardlinked)
+        do {
+            _ = try await boundary.importCSV(from: hardlinked)
+            fatalError("hard-link input accepted")
+        } catch RuntimeError.assetRejected { }
+        try FileManager.default.removeItem(at: hardlinked)
+
+        let fifo = sources.appendingPathComponent("special.csv")
+        precondition(mkfifo(fifo.path, 0o600) == 0)
+        do {
+            _ = try await boundary.importCSV(from: fifo)
+            fatalError("special input accepted")
+        } catch RuntimeError.assetRejected { }
+
+        do {
+            _ = try RuntimeOpenedFile.open(
+                path: sources.appendingPathComponent("../sources/input.csv").path,
+                requirement: .importedInput(maximumBytes: 32)
+            )
+            fatalError("path traversal accepted")
+        } catch RuntimeError.assetRejected { }
+
+        let pinned = try RuntimeOpenedFile.open(
+            path: source.path, requirement: .importedInput(maximumBytes: 32)
+        )
+        let moved = sources.appendingPathComponent("moved.csv")
+        try FileManager.default.moveItem(at: source, to: moved)
+        try input.write(to: source)
+        do {
+            try pinned.requirePathBindingUnchanged()
+            fatalError("concurrent path replacement accepted")
+        } catch RuntimeError.assetRejected { }
+
+        let output = Data("x,y\n3,4\n".utf8)
+        let outputID = "file_output"
+        do {
+            try await boundary.beginOutput(fileID: "file_missing-task", taskID: "task_missing",
+                                           mediaType: .csv, size: UInt64(output.count),
+                                           sha256: digest(output))
+            fatalError("missing task accepted")
+        } catch FileBoundaryError.unavailable { }
+        let expiredTaskID = try await store.approveExecution(
+            commandID: "command_expired", turnID: turnID, planID: "plan_runtime", revision: 1,
+            digest: planDigest, snapshotJSON: "{}", expiresAt: 0
+        )
+        do {
+            try await boundary.beginOutput(fileID: "file_expired-task", taskID: expiredTaskID,
+                                           mediaType: .csv, size: UInt64(output.count),
+                                           sha256: digest(output))
+            fatalError("expired task approval accepted")
+        } catch FileBoundaryError.unavailable { }
+        try await boundary.beginOutput(fileID: outputID, taskID: taskID, mediaType: .csv,
+                                       size: UInt64(output.count), sha256: digest(output))
+        do {
+            try await boundary.receiveOutputChunk(fileID: outputID, offset: 1,
+                                                  bytes: output.prefix(4))
+            fatalError("out-of-order output chunk accepted")
+        } catch FileBoundaryError.transferOrder { }
+        try await boundary.receiveOutputChunk(fileID: outputID, offset: 0, bytes: output.prefix(4))
+        try await boundary.receiveOutputChunk(fileID: outputID, offset: 4, bytes: output.dropFirst(4))
+        let committed = try await boundary.commitOutput(fileID: outputID)
+        precondition(committed.sha256 == digest(output))
+        let storedOutput = try await boundary.persistedVersion(fileID: outputID)
+        precondition(storedOutput == committed)
+        let artifact = workspace.appendingPathComponent("files/artifacts/file_output.csv")
+        let artifactContents = try Data(contentsOf: artifact)
+        precondition(artifactContents == output)
+        let artifactAttributes = try FileManager.default.attributesOfItem(atPath: artifact.path)
+        let artifactMode = artifactAttributes[.posixPermissions] as! NSNumber
+        precondition(artifactMode.intValue & 0o222 == 0)
+
+        do {
+            try await boundary.beginOutput(fileID: outputID, taskID: taskID, mediaType: .csv,
+                                           size: UInt64(output.count), sha256: digest(output))
+            fatalError("duplicate published file ID accepted")
+        } catch FileBoundaryError.unavailable { }
+        let retainedBytes = try Data(contentsOf: artifact)
+        let retainedVersion = try await boundary.persistedVersion(fileID: outputID)
+        precondition(retainedBytes == output)
+        precondition(retainedVersion == committed)
+
+        let badID = "file_bad-hash"
+        try await boundary.beginOutput(fileID: badID, taskID: taskID, mediaType: .markdown,
+                                       size: UInt64(output.count), sha256: String(repeating: "0", count: 64))
+        try await boundary.receiveOutputChunk(fileID: badID, offset: 0, bytes: output.prefix(4))
+        try await boundary.receiveOutputChunk(fileID: badID, offset: 4, bytes: output.dropFirst(4))
+        do {
+            _ = try await boundary.commitOutput(fileID: badID)
+            fatalError("output hash mismatch accepted")
+        } catch RuntimeError.assetRejected { }
+        let rejectedOutput = try await boundary.persistedVersion(fileID: badID)
+        precondition(rejectedOutput == nil)
+
+        let plainMarkdown = Data("ordinary text\n".utf8)
+        try await boundary.beginOutput(fileID: "file_plain-markdown", taskID: taskID,
+                                       mediaType: .markdown, size: UInt64(plainMarkdown.count),
+                                       sha256: digest(plainMarkdown))
+        var markdownOffset = 0
+        while markdownOffset < plainMarkdown.count {
+            let end = min(markdownOffset + 4, plainMarkdown.count)
+            try await boundary.receiveOutputChunk(
+                fileID: "file_plain-markdown", offset: UInt64(markdownOffset),
+                bytes: plainMarkdown[markdownOffset..<end]
+            )
+            markdownOffset = end
+        }
+        do {
+            _ = try await boundary.commitOutput(fileID: "file_plain-markdown")
+            fatalError("unstructured Markdown accepted")
+        } catch FileBoundaryError.invalidText { }
+
+        do {
+            try await boundary.beginOutput(
+                fileID: "file_too-large", taskID: taskID, mediaType: .csv,
+                size: 33, sha256: String(repeating: "0", count: 64)
+            )
+            fatalError("oversized output accepted")
+        } catch FileBoundaryError.sizeLimit { }
+
+        do {
+            _ = try HostFileBoundary(
+                root: workspace, store: store, maximumInputBytes: 32,
+                maximumOutputBytes: 32,
+                chunkBytes: HostFileBoundary.maximumFileChunkBytes + 1
+            )
+            fatalError("raw chunk limit exceeding encoded frame capacity accepted")
+        } catch FileBoundaryError.sizeLimit { }
+
+        let chunkRoot = root.appendingPathComponent("chunk-workspace")
+        let chunkStore = try WorkspaceStore(directory: chunkRoot)
+        let maximumChunk = HostFileBoundary.maximumFileChunkBytes
+        let chunkBoundary = try HostFileBoundary(
+            root: chunkRoot, store: chunkStore, maximumInputBytes: maximumChunk + 16,
+            maximumOutputBytes: 32, chunkBytes: maximumChunk
+        )
+        let chunkSource = sources.appendingPathComponent("chunk-boundary.csv")
+        var chunkInput = Data("a,b\n".utf8)
+        chunkInput.append(Data(repeating: 0x31, count: maximumChunk - chunkInput.count - 3))
+        chunkInput.append(Data(",2\n".utf8))
+        try chunkInput.write(to: chunkSource)
+        let chunkVersion = try await chunkBoundary.importCSV(from: chunkSource)
+        let maximumFrameChunk = try await chunkBoundary.inputChunk(
+            for: chunkVersion, offset: 0, epoch: 7, request: UUID()
+        )
+        let maximumPayload = try JSONSerialization.jsonObject(
+            with: maximumFrameChunk.frame.payload
+        ) as! [String: Any]
+        precondition(Data(base64Encoded: maximumPayload["bytes"] as! String)!.count == maximumChunk)
+        precondition(maximumFrameChunk.frame.payload.count <= RuntimeChannel.file.payloadLimit)
+
+        let staging = workspace.appendingPathComponent("files/staging")
+        let originalStaging = workspace.appendingPathComponent("files/staging-original")
+        try FileManager.default.moveItem(at: staging, to: originalStaging)
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: false)
+        do {
+            try await boundary.beginOutput(fileID: "file_replaced-directory", taskID: taskID,
+                                           mediaType: .csv, size: UInt64(output.count),
+                                           sha256: digest(output))
+            fatalError("replaced staging directory accepted")
+        } catch FileBoundaryError.invalidPath { }
+        try FileManager.default.removeItem(at: staging)
+        try FileManager.default.moveItem(at: originalStaging, to: staging)
+
+        let revokedID = "file_revoked-before-commit"
+        try await boundary.beginOutput(fileID: revokedID, taskID: taskID, mediaType: .csv,
+                                       size: UInt64(output.count), sha256: digest(output))
+        try await boundary.receiveOutputChunk(fileID: revokedID, offset: 0, bytes: output.prefix(4))
+        try await boundary.receiveOutputChunk(fileID: revokedID, offset: 4, bytes: output.dropFirst(4))
+        try await store.markInterruptedAfterProcessVerification()
+        do {
+            _ = try await boundary.commitOutput(fileID: revokedID)
+            fatalError("commit accepted a task that was no longer writable")
+        } catch FileBoundaryError.unavailable { }
+        precondition(!FileManager.default.fileExists(
+            atPath: workspace.appendingPathComponent("files/artifacts/\(revokedID).csv").path
+        ))
+        let revokedVersion = try await boundary.persistedVersion(fileID: revokedID)
+        precondition(revokedVersion == nil)
+    }
+
+    static func digest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }
