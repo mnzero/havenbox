@@ -21,49 +21,40 @@
       "required": ["supported", "default", "valueSchema"],
       "additionalProperties": false
     },
-    "optionalRule": {
+    "temperatureRule": {
       "type": "object",
       "properties": {
-        "supported": {"type": "boolean"},
-        "default": {
-          "oneOf": [{"type": "number"}, {"type": "string", "minLength": 1}]
-        },
+        "supported": {"const": false},
+        "default": {"const": "omitted"},
         "valueSchema": {
-          "oneOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {"const": "integer"},
-                "minimum": {"type": "integer", "minimum": 0},
-                "maximum": {"type": "integer", "minimum": 1}
-              },
-              "required": ["type", "minimum", "maximum"],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "type": {"const": "number"},
-                "minimum": {"type": "number"},
-                "maximum": {"type": "number"}
-              },
-              "required": ["type", "minimum", "maximum"],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "enum": {
-                  "type": "array",
-                  "items": {"type": "string", "minLength": 1},
-                  "minItems": 1,
-                  "uniqueItems": true
-                }
-              },
-              "required": ["enum"],
-              "additionalProperties": false
+          "type": "object",
+          "properties": {
+            "enum": {"type": "array", "items": {"const": "omitted"}, "minItems": 1, "uniqueItems": true}
+          },
+          "required": ["enum"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["supported", "default", "valueSchema"],
+      "additionalProperties": false
+    },
+    "reasoningRule": {
+      "type": "object",
+      "properties": {
+        "supported": {"const": true},
+        "default": {"enum": ["low", "high", "max"]},
+        "valueSchema": {
+          "type": "object",
+          "properties": {
+            "enum": {
+              "type": "array",
+              "items": {"enum": ["low", "high", "max"]},
+              "minItems": 3,
+              "uniqueItems": true
             }
-          ]
+          },
+          "required": ["enum"],
+          "additionalProperties": false
         }
       },
       "required": ["supported", "default", "valueSchema"],
@@ -73,31 +64,48 @@
   "type": "object",
   "properties": {
     "schemaVersion": {"const": "hb.inference-parameters.v1"},
-    "revision": {"type": "string", "minLength": 1},
+    "revision": {"const": "mvp01-kimi-k3-1-pro-1"},
     "status": {"const": "candidate"},
     "fields": {
       "type": "object",
       "properties": {
         "contextTokens": {"$ref": "#/$defs/tokenRule"},
         "maxOutputTokens": {"$ref": "#/$defs/tokenRule"},
-        "temperature": {"$ref": "#/$defs/optionalRule"},
-        "reasoningEffort": {"$ref": "#/$defs/optionalRule"}
+        "temperature": {"$ref": "#/$defs/temperatureRule"},
+        "reasoningEffort": {"$ref": "#/$defs/reasoningRule"}
       },
       "required": ["contextTokens", "maxOutputTokens", "temperature", "reasoningEffort"],
       "additionalProperties": false
     },
-    "mutuallyExclusive": {
-      "type": "array",
-      "items": {
-        "type": "array",
-        "items": {"enum": ["temperature", "reasoningEffort"]},
-        "minItems": 2,
-        "uniqueItems": true
+    "mutuallyExclusive": {"type": "array", "minItems": 0, "uniqueItems": true},
+    "protocol": {
+      "type": "object",
+      "properties": {
+        "maxOutputTokensField": {"const": "max_completion_tokens"},
+        "reasoningEffortField": {"const": "reasoning_effort"},
+        "responseFormat": {"const": "json_schema"},
+        "toolMode": {"const": "strict-function"},
+        "stream": {"const": true},
+        "streamOptions": {
+          "type": "object",
+          "properties": {"includeUsage": {"const": true}},
+          "required": ["includeUsage"],
+          "additionalProperties": false
+        },
+        "omittedParameters": {
+          "type": "array",
+          "items": {"enum": ["temperature", "top_p", "presence_penalty", "frequency_penalty"]},
+          "minItems": 4,
+          "uniqueItems": true
+        }
       },
-      "minItems": 0,
-      "uniqueItems": true
+      "required": [
+        "maxOutputTokensField", "reasoningEffortField", "responseFormat", "toolMode",
+        "stream", "streamOptions", "omittedParameters"
+      ],
+      "additionalProperties": false
     }
   },
-  "required": ["schemaVersion", "revision", "status", "fields", "mutuallyExclusive"],
+  "required": ["schemaVersion", "revision", "status", "fields", "mutuallyExclusive", "protocol"],
   "additionalProperties": false
 }

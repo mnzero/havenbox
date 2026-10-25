@@ -1,44 +1,29 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:havenbox:runtime-manifest:v1",
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "nullableString": {
+      "oneOf": [{"type": "null"}, {"type": "string", "minLength": 1}]
+    },
+    "nullableSha256": {
+      "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+    }
+  },
   "type": "object",
   "properties": {
-    "schemaVersion": {
-      "const": "hb.runtime.v1"
-    },
-    "revision": {
-      "type": "string",
-      "minLength": 1
-    },
-    "state": {
-      "enum": [
-        "candidate",
-        "probe",
-        "validated",
-        "frozen"
-      ]
-    },
-    "sourceCommit": {
-      "type": "string",
-      "minLength": 1
-    },
+    "schemaVersion": {"const": "hb.runtime.v1"},
+    "revision": {"type": "string", "minLength": 1},
+    "state": {"enum": ["candidate", "probe", "validated", "frozen"]},
+    "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
     "sourceSnapshot": {
       "type": "object",
       "properties": {
-        "baseCommit": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{40}$"
-        },
-        "sha256": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
-        },
+        "baseCommit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+        "sha256": {"$ref": "#/$defs/sha256"},
         "paths": {
           "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
+          "items": {"type": "string", "minLength": 1},
           "minItems": 1,
           "uniqueItems": true
         }
@@ -49,432 +34,271 @@
     "platform": {
       "type": "object",
       "properties": {
-        "os": {
-          "const": "macOS"
-        },
-        "architecture": {
-          "const": "arm64"
-        },
-        "minimumOSCandidate": {
-          "const": "14.0"
-        },
-        "minimumOSVerified": {
-          "type": "boolean"
-        },
-        "referenceMemoryGiB": {
-          "const": 16
-        },
-        "referenceHardware": {
-          "oneOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "string",
-              "minLength": 1
-            }
-          ]
-        }
+        "os": {"const": "macOS"},
+        "architecture": {"const": "arm64"},
+        "minimumOSCandidate": {"const": "14.0"},
+        "minimumOSVerified": {"type": "boolean"},
+        "referenceMemoryGiB": {"const": 16},
+        "referenceHardware": {"$ref": "#/$defs/nullableString"}
       },
       "required": [
-        "os",
-        "architecture",
-        "minimumOSCandidate",
-        "minimumOSVerified",
-        "referenceMemoryGiB",
-        "referenceHardware"
+        "os", "architecture", "minimumOSCandidate", "minimumOSVerified",
+        "referenceMemoryGiB", "referenceHardware"
       ],
       "additionalProperties": false
     },
     "distribution": {
       "type": "object",
       "properties": {
-        "kind": {
-          "const": "internal-package"
-        },
-        "hvfEntitlement": {
-          "const": "com.apple.security.hypervisor"
-        },
-        "signing": {
-          "const": "preserve-runtime-entitlement-or-reviewed-adhoc"
-        },
-        "notarization": {
-          "const": false
-        },
-        "automaticUpdates": {
-          "const": false
-        }
+        "kind": {"const": "internal-package"},
+        "hvfEntitlement": {"const": "com.apple.security.hypervisor"},
+        "signing": {"const": "preserve-runtime-entitlement-or-reviewed-adhoc"},
+        "notarization": {"const": false},
+        "automaticUpdates": {"const": false}
       },
-      "required": [
-        "kind",
-        "hvfEntitlement",
-        "signing",
-        "notarization",
-        "automaticUpdates"
-      ],
+      "required": ["kind", "hvfEntitlement", "signing", "notarization", "automaticUpdates"],
       "additionalProperties": false
     },
     "sqlite": {
       "type": "object",
       "properties": {
-        "version": {
-          "oneOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "string",
-              "minLength": 1
-            }
-          ]
-        },
-        "requiredFix": {
-          "const": "WAL-reset"
-        },
-        "upstreamReference": {
-          "const": "https://sqlite.org/releaselog/3_51_3.html"
-        },
-        "acceptance": {
-          "const": "exact-build-with-official-fix-evidence-and-WAL-regression"
-        },
-        "journalMode": {
-          "const": "WAL"
-        },
-        "synchronous": {
-          "const": "FULL"
-        },
-        "foreignKeys": {
-          "const": true
-        },
-        "backup": {
-          "const": "sqlite-backup-api"
-        }
+        "version": {"$ref": "#/$defs/nullableString"},
+        "requiredFix": {"const": "WAL-reset"},
+        "upstreamReference": {"const": "https://sqlite.org/releaselog/3_51_3.html"},
+        "acceptance": {"const": "exact-build-with-official-fix-evidence-and-WAL-regression"},
+        "journalMode": {"const": "WAL"},
+        "synchronous": {"const": "FULL"},
+        "foreignKeys": {"const": true},
+        "backup": {"const": "sqlite-backup-api"}
       },
       "required": [
-        "version",
-        "requiredFix",
-        "upstreamReference",
-        "acceptance",
-        "journalMode",
-        "synchronous",
-        "foreignKeys",
-        "backup"
+        "version", "requiredFix", "upstreamReference", "acceptance", "journalMode",
+        "synchronous", "foreignKeys", "backup"
       ],
       "additionalProperties": false
     },
     "runtime": {
       "type": "object",
       "properties": {
-        "accelerator": {
-          "const": "hvf"
-        },
-        "machine": {
-          "const": "virt"
-        },
-        "networkDevices": {
-          "const": 0
-        },
-        "sharedDirectories": {
-          "const": 0
-        },
-        "fallback": {
-          "const": "none"
-        },
-        "protocolVersion": {
-          "const": "hb.channel.v1"
-        },
-        "databaseSchema": {
-          "const": "hb.store.v2-candidate"
-        }
+        "accelerator": {"const": "hvf"},
+        "machine": {"const": "virt"},
+        "networkDevices": {"const": 0},
+        "sharedDirectories": {"const": 0},
+        "fallback": {"const": "none"},
+        "protocolVersion": {"const": "hb.channel.v1"},
+        "databaseSchema": {"const": "hb.store.v2-candidate"}
       },
       "required": [
-        "accelerator",
-        "machine",
-        "networkDevices",
-        "sharedDirectories",
-        "fallback",
-        "protocolVersion",
-        "databaseSchema"
+        "accelerator", "machine", "networkDevices", "sharedDirectories", "fallback",
+        "protocolVersion", "databaseSchema"
       ],
       "additionalProperties": false
     },
     "csv": {
       "type": "object",
       "properties": {
-        "version": {
-          "const": "hb.csv-policy.v1"
-        },
-        "moneyScale": {
-          "const": 2
-        },
-        "maxIntegerDigits": {
-          "const": 16
-        },
-        "numberPattern": {
-          "const": "-?(0|[1-9][0-9]{0,15})(\\.[0-9]{1,2})?"
-        },
-        "rounding": {
-          "const": "reject"
-        },
-        "overflow": {
-          "const": "reject-before-publish"
-        },
-        "comparison": {
-          "const": "exact-utf8-no-trim-no-casefold"
-        },
-        "order": {
-          "const": "input-order-stable"
-        },
+        "version": {"const": "hb.csv-policy.v1"},
+        "moneyScale": {"const": 2},
+        "maxIntegerDigits": {"const": 16},
+        "numberPattern": {"const": "-?(0|[1-9][0-9]{0,15})(\\.[0-9]{1,2})?"},
+        "rounding": {"const": "reject"},
+        "overflow": {"const": "reject-before-publish"},
+        "comparison": {"const": "exact-utf8-no-trim-no-casefold"},
+        "order": {"const": "input-order-stable"},
         "duplicateModes": {
           "type": "array",
-          "items": {
-            "enum": [
-              "all_members",
-              "after_first"
-            ]
-          },
+          "items": {"enum": ["all_members", "after_first"]},
           "minItems": 2,
           "uniqueItems": true
         }
       },
       "required": [
-        "version",
-        "moneyScale",
-        "maxIntegerDigits",
-        "numberPattern",
-        "rounding",
-        "overflow",
-        "comparison",
-        "order",
-        "duplicateModes"
+        "version", "moneyScale", "maxIntegerDigits", "numberPattern", "rounding",
+        "overflow", "comparison", "order", "duplicateModes"
       ],
       "additionalProperties": false
     },
     "limits": {
       "type": "object",
       "properties": {
-        "csvFiles": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "csvFileBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "csvTotalBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "cellBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "columns": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "previewRows": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "previewBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "vmCPUs": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "vmMemoryBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "vmDiskBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "toolSteps": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "taskSeconds": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "toolSeconds": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "stdoutBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "stderrBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "contextTokens": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "outputTokens": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "requestBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "requestsPerTurn": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "requestSeconds": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "concurrentRequests": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "stopGraceSeconds": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "cleanupFailureSeconds": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "workerMemoryBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "workerScratchBytes": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "aggregateGroups": {
-          "type": "integer",
-          "minimum": 1
-        }
+        "csvFiles": {"type": "integer", "minimum": 1},
+        "csvFileBytes": {"type": "integer", "minimum": 1},
+        "csvTotalBytes": {"type": "integer", "minimum": 1},
+        "cellBytes": {"type": "integer", "minimum": 1},
+        "columns": {"type": "integer", "minimum": 1},
+        "previewRows": {"type": "integer", "minimum": 1},
+        "previewBytes": {"type": "integer", "minimum": 1},
+        "vmCPUs": {"type": "integer", "minimum": 1},
+        "vmMemoryBytes": {"type": "integer", "minimum": 1},
+        "vmDiskBytes": {"type": "integer", "minimum": 1},
+        "toolSteps": {"type": "integer", "minimum": 1},
+        "taskSeconds": {"type": "integer", "minimum": 1},
+        "toolSeconds": {"type": "integer", "minimum": 1},
+        "stdoutBytes": {"type": "integer", "minimum": 1},
+        "stderrBytes": {"type": "integer", "minimum": 1},
+        "contextTokens": {"type": "integer", "minimum": 1},
+        "outputTokens": {"type": "integer", "minimum": 1},
+        "requestBytes": {"type": "integer", "minimum": 1},
+        "requestsPerTurn": {"type": "integer", "minimum": 1},
+        "requestSeconds": {"type": "integer", "minimum": 1},
+        "concurrentRequests": {"type": "integer", "minimum": 1},
+        "stopGraceSeconds": {"type": "integer", "minimum": 1},
+        "cleanupFailureSeconds": {"type": "integer", "minimum": 1},
+        "workerMemoryBytes": {"type": "integer", "minimum": 1},
+        "workerScratchBytes": {"type": "integer", "minimum": 1},
+        "aggregateGroups": {"type": "integer", "minimum": 1}
       },
       "required": [
-        "csvFiles",
-        "csvFileBytes",
-        "csvTotalBytes",
-        "cellBytes",
-        "columns",
-        "previewRows",
-        "previewBytes",
-        "vmCPUs",
-        "vmMemoryBytes",
-        "vmDiskBytes",
-        "toolSteps",
-        "taskSeconds",
-        "toolSeconds",
-        "stdoutBytes",
-        "stderrBytes",
-        "contextTokens",
-        "outputTokens",
-        "requestBytes",
-        "requestsPerTurn",
-        "requestSeconds",
-        "concurrentRequests",
-        "stopGraceSeconds",
-        "cleanupFailureSeconds",
-        "workerMemoryBytes",
-        "workerScratchBytes",
-        "aggregateGroups"
+        "csvFiles", "csvFileBytes", "csvTotalBytes", "cellBytes", "columns",
+        "previewRows", "previewBytes", "vmCPUs", "vmMemoryBytes", "vmDiskBytes",
+        "toolSteps", "taskSeconds", "toolSeconds", "stdoutBytes", "stderrBytes",
+        "contextTokens", "outputTokens", "requestBytes", "requestsPerTurn",
+        "requestSeconds", "concurrentRequests", "stopGraceSeconds",
+        "cleanupFailureSeconds", "workerMemoryBytes", "workerScratchBytes", "aggregateGroups"
       ],
       "additionalProperties": false
     },
     "recovery": {
-      "const": "preview-summary-new-session-no-replay"
+      "type": "object",
+      "properties": {
+        "mode": {"const": "single-task-read-only-history-no-replay"},
+        "workspaceCount": {"const": 1},
+        "activeTasks": {"const": 1},
+        "unfinishedTaskState": {"const": "Interrupted"},
+        "readOnlyHistory": {"const": true},
+        "replayModelRequests": {"const": false},
+        "replayToolCalls": {"const": false},
+        "continueConversation": {"const": false}
+      },
+      "required": [
+        "mode", "workspaceCount", "activeTasks", "unfinishedTaskState", "readOnlyHistory",
+        "replayModelRequests", "replayToolCalls", "continueConversation"
+      ],
+      "additionalProperties": false
+    },
+    "endToEndSample": {
+      "type": "object",
+      "properties": {
+        "id": {"const": "mvp-csv-sales-v1"},
+        "fixtures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"enum": ["tests/fixtures/csv/valid-sales.csv", "tests/fixtures/csv/duplicate-keys.csv"]},
+              "sha256": {"$ref": "#/$defs/sha256"}
+            },
+            "required": ["path", "sha256"],
+            "additionalProperties": false
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        },
+        "expectationsPath": {"const": "tests/fixtures/csv/expected-results.json"},
+        "expectationsSha256": {"$ref": "#/$defs/sha256"},
+        "caseIds": {
+          "type": "array",
+          "items": {"enum": ["total", "exclude-negative", "group-store", "duplicate-keys"]},
+          "minItems": 4,
+          "uniqueItems": true
+        },
+        "expected": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "object",
+              "properties": {"rows": {"const": 5}, "sum": {"const": "700.00"}},
+              "required": ["rows", "sum"],
+              "additionalProperties": false
+            },
+            "excludeNegative": {
+              "type": "object",
+              "properties": {
+                "rows": {"const": 4}, "excludedRows": {"const": 1}, "sum": {"const": "720.00"}
+              },
+              "required": ["rows", "excludedRows", "sum"],
+              "additionalProperties": false
+            },
+            "groupStore": {
+              "type": "object",
+              "properties": {
+                "North": {
+                  "type": "object",
+                  "properties": {"count": {"const": 3}, "sum": {"const": "370.00"}},
+                  "required": ["count", "sum"], "additionalProperties": false
+                },
+                "South": {
+                  "type": "object",
+                  "properties": {"count": {"const": 2}, "sum": {"const": "330.00"}},
+                  "required": ["count", "sum"], "additionalProperties": false
+                }
+              },
+              "required": ["North", "South"], "additionalProperties": false
+            },
+            "duplicateKeys": {
+              "type": "object",
+              "properties": {
+                "key": {"const": "c-001"},
+                "rows": {"type": "array", "items": {"enum": [1, 2]}, "minItems": 2, "uniqueItems": true},
+                "emptyKeyRows": {"type": "array", "items": {"const": 4}, "minItems": 1, "uniqueItems": true}
+              },
+              "required": ["key", "rows", "emptyKeyRows"], "additionalProperties": false
+            }
+          },
+          "required": ["total", "excludeNegative", "groupStore", "duplicateKeys"],
+          "additionalProperties": false
+        },
+        "oracleCommand": {"const": "python3 tests/fixtures/csv/check.py"},
+        "acceptance": {"type": "string", "minLength": 1}
+      },
+      "required": [
+        "id", "fixtures", "expectationsPath", "expectationsSha256", "caseIds", "expected",
+        "oracleCommand", "acceptance"
+      ],
+      "additionalProperties": false
+    },
+    "releaseQualification": {
+      "type": "object",
+      "properties": {
+        "requiredEvidence": {
+          "type": "array", "items": {"enum": ["MVP-07", "MVP-08"]}, "minItems": 2, "uniqueItems": true
+        },
+        "candidateInputs": {
+          "type": "array",
+          "items": {"enum": ["HB-10", "HB-11", "HB-13", "HB-14", "HB-16"]},
+          "minItems": 5,
+          "uniqueItems": true
+        },
+        "developmentGrantReleaseEligible": {"const": false},
+        "pausedCapabilities": {
+          "type": "array",
+          "items": {"enum": ["external-harness", "local-model", "mcp", "multi-session"]},
+          "minItems": 4,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "requiredEvidence", "candidateInputs", "developmentGrantReleaseEligible", "pausedCapabilities"
+      ],
+      "additionalProperties": false
     },
     "dependencies": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "version": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "string",
-                "minLength": 1
-              }
-            ]
-          },
-          "sha256": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "string",
-                "pattern": "^[a-f0-9]{64}$"
-              }
-            ]
-          },
-          "license": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "string",
-                "minLength": 1
-              }
-            ]
-          },
-          "sbom": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "string",
-                "minLength": 1
-              }
-            ]
-          },
-          "source": {
-            "type": "string",
-            "minLength": 1
-          },
-          "status": {
-            "enum": [
-              "pending",
-              "probe"
-            ]
-          },
-          "evidence": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "string",
-                "minLength": 1
-              }
-            ]
-          }
+          "id": {"type": "string", "minLength": 1},
+          "version": {"$ref": "#/$defs/nullableString"},
+          "artifact": {"$ref": "#/$defs/nullableString"},
+          "sha256": {"$ref": "#/$defs/nullableSha256"},
+          "license": {"$ref": "#/$defs/nullableString"},
+          "sbom": {"$ref": "#/$defs/nullableString"},
+          "source": {"type": "string", "minLength": 1},
+          "status": {"enum": ["pending", "probe"]},
+          "evidence": {"$ref": "#/$defs/nullableString"}
         },
         "required": [
-          "id",
-          "version",
-          "sha256",
-          "license",
-          "sbom",
-          "source",
-          "status",
-          "evidence"
+          "id", "version", "artifact", "sha256", "license", "sbom", "source", "status", "evidence"
         ],
         "additionalProperties": false
       },
@@ -486,24 +310,11 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "path": {
-            "type": "string",
-            "minLength": 1
-          },
-          "sha256": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
-          }
+          "id": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"$ref": "#/$defs/sha256"}
         },
-        "required": [
-          "id",
-          "path",
-          "sha256"
-        ],
+        "required": ["id", "path", "sha256"],
         "additionalProperties": false
       },
       "minItems": 1,
@@ -511,30 +322,15 @@
     },
     "unresolved": {
       "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      },
+      "items": {"type": "string", "minLength": 1},
       "minItems": 0,
       "uniqueItems": true
     }
   },
   "required": [
-    "schemaVersion",
-    "revision",
-    "state",
-    "sourceCommit",
-    "sourceSnapshot",
-    "platform",
-    "distribution",
-    "sqlite",
-    "runtime",
-    "csv",
-    "limits",
-    "recovery",
-    "dependencies",
-    "contracts",
-    "unresolved"
+    "schemaVersion", "revision", "state", "sourceCommit", "sourceSnapshot", "platform",
+    "distribution", "sqlite", "runtime", "csv", "limits", "recovery", "endToEndSample",
+    "releaseQualification", "dependencies", "contracts", "unresolved"
   ],
   "additionalProperties": false
 }

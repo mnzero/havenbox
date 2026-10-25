@@ -4,11 +4,11 @@
 
 ## 版本、证据和依赖
 
-- `candidate`：待实现/待探测；`probe`：仅有明确范围的真实探针；`validated`：同一 binding 下 HB-31 功能与 HB-32 边界全通过；`frozen`：版本/制品/许可证与内部包审批齐全。枚举值本身不是授权。
-- 基线候选冻结与普通用户组合资格不同：HB-08 的候选可供 HB-09 开发，但不能称产品基线冻结。普通执行资格检查要求 frozen manifest、validated/frozen 组合与三个可信 receipt；任意缺项拒绝。资格也不替代运行时授权。
+- `candidate`：待实现/待探测；`probe`：仅有明确范围的真实探针；`validated`：同一 binding 下 MVP-07 安全与故障验收通过；`frozen`：版本/制品/许可证与 MVP-08 内部包审批齐全。枚举值本身不是授权。
+- MVP-01 冻结唯一候选组合不等于产品可执行。普通执行资格要求 frozen manifest、validated/frozen 组合以及同一 binding 的 MVP-07、MVP-08 两个可信 receipt；receipt 必须分别标明任务 `MVP-07`、`MVP-08`，任意缺项、旧 HB receipt 或开发 ValidationRunGrant 均拒绝。资格也不替代运行时授权。
 - `binding = SHA256(hb-canonical-json-v1({manifest, combination_without_state_and_evidence}))`。规范 JSON 为 UTF-8、键排序、无空白、禁止 NaN/重复键；哈希版本是本契约而非声称 RFC8785。正式跨语言实现必须用共享 golden vectors 校验，当前 Python 是参考实现。
-- manifest 包含所有构建依赖、资产、协议/schema/检查器文件 SHA-256。任一版本、端点/凭据 revision、模型/模板、参数 schema、工具策略、资源上限或接口内容变化，必须生成新 revision，重算清单并重跑；旧 binding 不再接受。证据不能自动“迁移”。不提供自动重签或自动授予资格入口。
-- 外部 receipt 注册表仅由宿主从受审证据导入；JSON 中的路径、`pass` 或 digest 不具有签名效力。实际校验报告/资产来源和签发信任根由 HB-09/31–33 建立。
+- manifest 包含 MVP 构建依赖、资产、协议/schema/检查器文件 SHA-256；已有资产保留实测 hash，缺失制品保持 null 并列入 unresolved。任一版本、端点/凭据 revision、模型/模板、参数 schema、工具策略、资源上限或接口内容变化，必须生成新 revision，重算清单并重跑；旧 binding 不再接受。证据不能自动“迁移”。不提供自动重签或自动授予资格入口。
+- 外部 receipt 注册表仅由宿主从受审证据导入；JSON 中的路径、`pass` 或 digest 不具有签名效力。HB-10、HB-11、HB-13、HB-14、HB-16 只是候选输入，实际发布信任根与最终结论只由 MVP-07、MVP-08 建立。
 
 ## 宿主/来宾帧 `hb.channel.v1`
 
@@ -32,23 +32,23 @@ SessionId、TurnId、TaskId、CallId、FileVersionId 采用带前缀字符串的
 
 `CallPermit` 必须宿主批准且绑定 call/task/plan/arguments/step/epoch/期限；重复 call ID 只读核查记录，不重做写操作。模型/工具仅返回建议，`ToolSuggestion` 永不等于许可。ArtifactVersion 绑定内容 hash、provenance 与 completeness，成功退出码不代表成果完整。
 
-HarnessAdapter 统一入口：probe、open、submit、events、answerApproval、cancel、close。返回规范事件 textDelta/planSuggestion/toolSuggestion/approvalRequired/usage/completed/error；原生 ACP、Pi RPC、dsh SDK 字段只在适配层转换。未知事件为 protocol error。Kimi 的真实 ACP 映射、Pi 受审桥与上下文接管、dsh profile 补丁仍待各 HB 探针实证，不能把这些内部名称称为外部 SDK 方法。
+MVP 运行路径只使用 `BuiltinAgent` 和固定 CSV CLI，不接受外部 HarnessAdapter、MCP 或任意 executable。模型只返回澄清问题或声明式计划，`ToolSuggestion` 永不等于许可；宿主仍须拒绝未知工具、字段、表达式和宿主路径。旧 ACP、Pi RPC、dsh SDK 适配代码仅作历史候选保留。
 
-恢复统一候选策略为用户预览摘要后创建新会话；只读历史先恢复，epoch 更新，旧 grant/permit 失效，不自动重放工具或联网请求。原生恢复暂不启用，但保留本期实现要求；未来增加前必须验证版本、原生记录、文件引用、上下文与无自动续跑。未知结果先核查，清理失败占用活动槽。
+恢复策略为单工作空间、单活动任务、只读历史；启动时 epoch 更新，旧 grant/permit 失效，未完成任务标记 `Interrupted`，不自动重放工具或联网请求，也不继续对话。原生恢复与多会话不属于 MVP。未知结果先核查，清理失败占用活动槽。
 
 ## ValidationRunGrant（合成测试启动资格）
 
-`contracts/baseline.py:authorize_validation` 是纯校验函数，不启动进程或请求，也不签发 token。可信宿主通过随机不透明 ID 注册 exact grant，内部构建才能调用；普通/release 构建拒绝，即使持有合法 grant。不可用环境变量或来宾字段改变构建类别。正式 release target 还必须排除测试签发入口并做构建回归（HB-09/33）。
+`contracts/baseline.py:authorize_validation` 是纯校验函数，不启动进程或请求，也不签发 token。可信宿主通过随机不透明 ID 注册 exact grant，内部构建才能调用；普通/release 构建拒绝，即使持有合法 grant。不可用环境变量或来宾字段改变构建类别。MVP-08 必须证明 release target 排除测试签发入口。
 
 grant 绑定候选 binding、组合、受审合成数据集 digest、完整路由 digest、epoch/session/turn、显式测试授权 digest、notBefore/expiresAt（最长 1 小时）和 requests/inputTokens/outputTokens/bytes/toolCalls/seconds 限额。请求 reservation 表示本次请求后的累计最坏预留总量，不是单次增量；宿主必须在单一事务中核查并预留，不能信任来宾自报计数。未知用量保留预留，撤销即删/失效注册记录；重启 epoch 变化。测试数据集注册表应以实际字节和固定期望形成 digest，不接受请求自报 synthetic=true。
 
-它**仅替代“已有组合证据”前置**；文件授权、首次联网披露、CallPermit、TLS/地址限制、无网卡、工具沙箱、配额预留、停止与进程核查全部仍须正常执行。HB-08 没有实现这些边界，因此该函数返回资格结论不能用于直接执行产品任务。路由未知或必需版本未固定时拒绝 grant；本仓库四个候选都不能直接签发可执行 grant。
+它**仅替代开发验证的“已有组合证据”前置**；文件授权、首次联网披露、CallPermit、TLS/地址限制、无网卡、工具沙箱、配额预留、停止与进程核查全部仍须正常执行。路由未知或必需版本未固定时拒绝 grant；当前唯一候选仍有未固定制品，不能直接签发可执行 grant。ValidationRunGrant 永远不能作为 MVP-07/MVP-08 receipt 或发布资格。
 
-## Harness 与推理参数校验
+## 内置 Agent 与推理参数校验
 
-兼容矩阵用 `builtin` 明确表示内置 Agent，外部 harness 标识保持 `kimi-cli`、`pi`、`dsh`；`pending` 仅表示待选。接受标识不代表组合可用，内置与外部组合适用同一证据、版本、grant 和 release 拒绝门槛，当前四个候选状态不变。
+兼容矩阵只接受 `builtin-kimi-k3-1-pro-csv`：内置 Agent、Moonshot AI Kimi API `kimi-k3.1-pro`、OpenAI 兼容 Chat Completions、固定 HTTPS `/v1/chat/completions` 端点和 CLI 工具入口。第二组合、外部 harness、本地模型、MCP、多会话恢复、其他模型或非 HTTPS 端点均由 schema 拒绝；接受唯一候选标识不代表组合已可执行。
 
-`contextTokens` 和 `maxOutputTokens` 是必需预算规则，必须 `supported=true`，默认值及 minimum/maximum 均为正整数，valueSchema.type 固定为 integer。`check_schema` 在形状校验后验证 minimum ≤ default ≤ maximum；该跨字段约束不由 JSON Schema 文本单独完成。`normalize_parameters` 先检查完整契约，覆盖值不能掩盖非法默认值；错误经带字段路径的 `ContractError` 拒绝，不抛缺键异常。有效请求还必须满足输入、模板、工具及最大输出总和不超过上下文预算；各字段合法不代表联合预算可用。温度与 reasoning 仍可声明不支持，不因此开放能力。
+`contextTokens` 和 `maxOutputTokens` 是本地必需预算规则，必须 `supported=true`，默认值及 minimum/maximum 均为正整数，valueSchema.type 固定为 integer；8192/2048 是 Havenbox 上限，不声称是提供方上下文上限。`maxOutputTokens` 映射官方 `max_completion_tokens`，`reasoningEffort` 映射 `reasoning_effort` 并固定为 `low`（可选 `high`/`max`）。请求使用 SSE 与 usage、`response_format=json_schema` 和 strict function tools；temperature/top_p/penalty 不发送。`check_schema` 验证默认值边界，`normalize_parameters` 拒绝未知或不支持参数，并确保输入、模板、工具及最大输出总和不超过本地上下文预算。
 
 ## CSV 与资源候选
 

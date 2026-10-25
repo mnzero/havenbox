@@ -28,7 +28,7 @@
 | 桌面应用 | SwiftUI 和 Swift 核心 | 仓库已有候选工程和存储实现 |
 | 隔离 | 固定 QEMU/HVF Linux VM | 已有真实 VM 候选证据，且不把执行移到宿主 |
 | Agent | Havenbox 内置状态机 | 避免三种外部协议、历史和旁路工具同时进入关键路径 |
-| 模型 | 一个冻结的联网模型组合 | 当前已有 Keychain 和联网配置候选，本地模型仍缺真实资产验证 |
+| 模型 | Moonshot AI Kimi API `kimi-k3.1-pro`，OpenAI 兼容 Chat Completions | 官方文档确认固定 HTTPS 端点、严格函数工具和 `json_schema`；真实组合验收仍属 MVP-04/07/08 |
 | 工具入口 | 固定 CLI 和 `CallPermit` | 仓库已有 CSV 引擎及 CLI 候选，MCP 不增加 MVP 用户价值 |
 | 存储 | SQLite 3.51.3 和不可变文件对象 | 复用现有事务、迁移和事件实现 |
 | 并发 | 全局一个活动任务 | 删除队列、跨会话和资源竞争设计 |
@@ -170,7 +170,7 @@ CSV 预览按页读取，并把单元格作为纯文本显示。Markdown 渲染�
 
 ## 7. 推理网关
 
-MVP 网关只实现一个冻结协议和端点，不提供通用代理能力。
+MVP 网关只实现 `https://api.moonshot.cn/v1/chat/completions` 的 OpenAI 兼容协议和 `kimi-k3.1-pro`，不提供通用代理能力。请求使用 strict function tools、`response_format=json_schema`、SSE 和 usage；本地 8192 上下文/2048 输出预算分别映射到请求规划和 `max_completion_tokens`，`reasoning_effort` 默认 `low`，不发送 temperature、top_p 或 penalty。上述参数来自 MVP-01 官方文档冻结，真实模型行为仍须 MVP-04 验证。
 
 网关执行以下校验：
 

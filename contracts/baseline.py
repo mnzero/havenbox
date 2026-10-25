@@ -84,7 +84,7 @@ def validate(value, schema, path="$", root=None):
     root = schema if root is None else root
     supported = {"$schema", "$id", "$defs", "$ref", "title", "description", "type",
                  "properties", "required", "additionalProperties", "items", "minItems",
-                 "uniqueItems", "minLength", "pattern", "minimum", "maximum", "enum",
+                 "maxItems", "uniqueItems", "minLength", "pattern", "minimum", "maximum", "enum",
                  "const", "oneOf"}
     require(not (set(schema) - supported), f"{path}: unsupported schema keyword")
     if "$ref" in schema:
@@ -125,6 +125,7 @@ def validate(value, schema, path="$", root=None):
                 validate(item, props[key], f"{path}.{key}", root)
     if isinstance(value, list):
         require(len(value) >= schema.get("minItems", 0), f"{path}: too few items")
+        require(len(value) <= schema.get("maxItems", math.inf), f"{path}: too many items")
         if schema.get("uniqueItems"):
             require(len({digest(v) for v in value}) == len(value), f"{path}: duplicates")
         for index, item in enumerate(value):
@@ -200,7 +201,7 @@ def check_inventory(manifest, matrix):
     required_paths = {str(p.relative_to(ROOT)) for p in (ROOT / "config/schemas").glob("*.json")}
     required_paths.update({"config/inference-parameters.json", "contracts/baseline.py",
                            "contracts/protocol.md", "tests/contracts/test_baseline.py",
-                           "scripts/check-baseline.py",
+                           "scripts/check-baseline.py", "tests/fixtures/csv/check.py",
                            "config/build-toolchain.json", "contracts/header-vectors.tsv",
                            "Package.swift", "guest/Cargo.lock", "scripts/engineering.py",
                            "Sources/HavenboxCore/ProtocolHeader.swift", "Sources/HavenboxCore/WireID.swift",
@@ -209,15 +210,33 @@ def check_inventory(manifest, matrix):
     require({item["path"] for item in manifest["contracts"]} == required_paths,
             "incomplete contract inventory")
     required_dependencies = {
-        "swift-toolchain", "rust-toolchain", "qemu", "qemu-img", "linux-kernel", "guest-image",
-        "node-runtime", "python-runtime", "kimi-cli", "pi", "dsh", "builtin-adapter",
-        "kimi-adapter", "pi-adapter", "dsh-adapter", "harness-patches", "llama-runtime",
-        "local-model", "model-template", "mcp-protocol", "mcp-sdk", "mcp-server", "csv-engine",
-        "cli", "sqlite", "watchdog", "supervisor", "gateway", "check-suite"}
+        "swift-toolchain", "rust-toolchain", "zig-toolchain", "e2fsprogs-toolchain",
+        "qemu", "qemu-img", "linux-kernel", "guest-image", "guest-initramfs",
+        "guest-data-image", "builtin-agent", "gateway", "csv-engine", "csv-executable",
+        "cli", "cli-template", "sqlite", "supervisor", "check-suite"}
     require({d["id"] for d in manifest["dependencies"]} == required_dependencies,
-            "incomplete build dependency inventory")
+            "incomplete MVP dependency inventory")
     ids = [item["id"] for item in matrix["combinations"]]
-    require(len(ids) == len(set(ids)), "duplicate combination id")
+    require(ids == ["builtin-kimi-k3-1-pro-csv"], "MVP requires exactly one frozen combination")
+    qualification = manifest["releaseQualification"]
+    require(qualification["requiredEvidence"] == ["MVP-07", "MVP-08"],
+            "release evidence must be MVP-07 and MVP-08")
+    require(qualification["candidateInputs"] == ["HB-10", "HB-11", "HB-13", "HB-14", "HB-16"],
+            "unexpected MVP candidate inputs")
+    require(qualification["developmentGrantReleaseEligible"] is False,
+            "development grant cannot qualify release")
+    parameters = load(ROOT / "config/inference-parameters.json")
+    require(matrix["combinations"][0]["route"]["parametersRevision"] == parameters["revision"],
+            "inference parameter revision drift")
+    sample = manifest["endToEndSample"]
+    for fixture in sample["fixtures"]:
+        path = ROOT / fixture["path"]
+        require(path.is_file(), f"missing MVP fixture: {fixture['path']}")
+        require(hashlib.sha256(path.read_bytes()).hexdigest() == fixture["sha256"],
+                f"MVP fixture drift: {fixture['path']}")
+    expectations = ROOT / sample["expectationsPath"]
+    require(hashlib.sha256(expectations.read_bytes()).hexdigest() == sample["expectationsSha256"],
+            "MVP fixture expectations drift")
     for artifact in manifest["contracts"]:
         path = ROOT / artifact["path"]
         require(path.resolve().is_relative_to(ROOT), "contract outside repository")
@@ -233,7 +252,7 @@ def select(matrix, combination_id):
 
 
 def authorize_ordinary(manifest, matrix, combination_id, trusted_evidence):
-    """Checks qualification only, never grants execution/disclosure permission."""
+    """Checks release qualification only; ValidationRunGrant is never release evidence."""
     check_inventory(manifest, matrix)
     combination = select(matrix, combination_id)
     require(manifest["state"] == "frozen", "baseline not frozen")
@@ -250,29 +269,27 @@ def authorize_ordinary(manifest, matrix, combination_id, trusted_evidence):
     check_route(combination)
     expected = binding(manifest, combination)
     evidence = combination["evidence"]
-    for gate in ("functional", "security", "release"):
+    for gate, task in (("mvp07", "MVP-07"), ("mvp08", "MVP-08")):
         receipt = evidence[gate]
-        require(receipt is not None, f"missing {gate} evidence")
+        require(receipt is not None, f"missing {task} evidence")
         require(receipt in trusted_evidence, "untrusted evidence")
         record = trusted_evidence[receipt]
-        require(record == {"binding": expected, "gate": gate, "result": "pass"},
-                f"stale or failed {gate} evidence")
+        require(record == {"binding": expected, "gate": gate, "task": task, "result": "pass"},
+                f"stale, failed or wrong-task {task} evidence")
     return expected
 
 
 def check_route(combination):
-    require(combination["harness"] != "pending" and combination["adapterRevision"] is not None,
-            "unresolved harness/adapter")
+    require(combination["harness"] == "builtin" and combination["adapterRevision"] is not None,
+            "MVP requires the builtin Agent")
     route = combination["route"]
-    common = ("protocol", "modelId")
-    required = (("providerRevision", "credentialVersion", "endpointRevision")
-                if route["mode"] == "online" else
-                ("resourceRevision", "runtimeRevision", "templateDigest", "quantization"))
-    forbidden = (("resourceRevision", "runtimeRevision", "templateDigest", "quantization")
-                 if route["mode"] == "online" else
-                 ("providerRevision", "credentialVersion", "endpointRevision"))
-    require(all(route[key] is not None for key in common + required), "unresolved route")
-    require(all(route[key] is None for key in forbidden), "mixed route")
+    require(route["mode"] == "online", "MVP requires the frozen online route")
+    required = ("provider", "providerRevision", "credentialVersion", "protocol", "modelId",
+                "endpoint", "endpointRevision", "parametersRevision")
+    require(all(route[key] is not None for key in required), "unresolved route")
+    require(route["endpoint"].startswith("https://"), "MVP endpoint must use HTTPS")
+    forbidden = ("resourceRevision", "runtimeRevision", "templateDigest", "quantization")
+    require(all(route[key] is None for key in forbidden), "local or mixed route")
 
 
 def authorize_validation(manifest, matrix, grant, request, *, build_flavor,

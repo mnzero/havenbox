@@ -1,8 +1,8 @@
 {
   "schemaVersion": "hb.runtime.v1",
-  "revision": "hb14-candidate-2",
+  "revision": "mvp01-candidate-1",
   "state": "candidate",
-  "sourceCommit": "edd3ca25de358e43411da0108c438fea6094ecd5",
+  "sourceCommit": "6e153b1837629020face30b1e6e0344d09abb172",
   "platform": {
     "os": "macOS",
     "architecture": "arm64",
@@ -19,7 +19,7 @@
     "automaticUpdates": false
   },
   "sqlite": {
-    "version": null,
+    "version": "3.51.3",
     "requiredFix": "WAL-reset",
     "upstreamReference": "https://sqlite.org/releaselog/3_51_3.html",
     "acceptance": "exact-build-with-official-fix-evidence-and-WAL-regression",
@@ -79,11 +79,95 @@
     "workerScratchBytes": 2147483648,
     "aggregateGroups": 100000
   },
-  "recovery": "preview-summary-new-session-no-replay",
+  "recovery": {
+    "mode": "single-task-read-only-history-no-replay",
+    "workspaceCount": 1,
+    "activeTasks": 1,
+    "unfinishedTaskState": "Interrupted",
+    "readOnlyHistory": true,
+    "replayModelRequests": false,
+    "replayToolCalls": false,
+    "continueConversation": false
+  },
+  "endToEndSample": {
+    "id": "mvp-csv-sales-v1",
+    "fixtures": [
+      {
+        "path": "tests/fixtures/csv/valid-sales.csv",
+        "sha256": "659af3f0aa6532a5f24476193cf79a6c590ba8df13981b4b404fc73469cf4f46"
+      },
+      {
+        "path": "tests/fixtures/csv/duplicate-keys.csv",
+        "sha256": "6d2a98393ba606f7ef3ab66e0de177cfe1bace62211fcf7bc784228290e80b1d"
+      }
+    ],
+    "expectationsPath": "tests/fixtures/csv/expected-results.json",
+    "expectationsSha256": "8e395ec7836237e7978d1f17fb520bb5b652a89421168096991c1b4ea0374913",
+    "caseIds": [
+      "total",
+      "exclude-negative",
+      "group-store",
+      "duplicate-keys"
+    ],
+    "expected": {
+      "total": {
+        "rows": 5,
+        "sum": "700.00"
+      },
+      "excludeNegative": {
+        "rows": 4,
+        "excludedRows": 1,
+        "sum": "720.00"
+      },
+      "groupStore": {
+        "North": {
+          "count": 3,
+          "sum": "370.00"
+        },
+        "South": {
+          "count": 2,
+          "sum": "330.00"
+        }
+      },
+      "duplicateKeys": {
+        "key": "c-001",
+        "rows": [
+          1,
+          2
+        ],
+        "emptyKeyRows": [
+          4
+        ]
+      }
+    },
+    "oracleCommand": "python3 tests/fixtures/csv/check.py",
+    "acceptance": "MVP-03 real guest CLI plus MVP-07/MVP-08; fixture arithmetic alone is not end-to-end evidence"
+  },
+  "releaseQualification": {
+    "requiredEvidence": [
+      "MVP-07",
+      "MVP-08"
+    ],
+    "candidateInputs": [
+      "HB-10",
+      "HB-11",
+      "HB-13",
+      "HB-14",
+      "HB-16"
+    ],
+    "developmentGrantReleaseEligible": false,
+    "pausedCapabilities": [
+      "external-harness",
+      "local-model",
+      "mcp",
+      "multi-session"
+    ]
+  },
   "dependencies": [
     {
       "id": "swift-toolchain",
       "version": "6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)",
+      "artifact": null,
       "sha256": null,
       "license": null,
       "sbom": null,
@@ -94,6 +178,7 @@
     {
       "id": "rust-toolchain",
       "version": "1.99.1 (58cf8f9c3 2026-10-13) Homebrew",
+      "artifact": null,
       "sha256": null,
       "license": null,
       "sbom": null,
@@ -102,8 +187,31 @@
       "evidence": "doc/verification/HB-09.md"
     },
     {
+      "id": "zig-toolchain",
+      "version": "0.17.0",
+      "artifact": "/opt/homebrew/bin/zig",
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "HB-11 static Linux AArch64 build-std linker; binary hash not yet manifest-bound",
+      "status": "probe",
+      "evidence": "doc/verification/HB-11.md"
+    },
+    {
+      "id": "e2fsprogs-toolchain",
+      "version": "1.47.4",
+      "artifact": "mke2fs/debugfs/e2fsck",
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "HB-11 offline image tools; executable hashes not yet individually manifest-bound",
+      "status": "probe",
+      "evidence": "doc/verification/HB-11.md"
+    },
+    {
       "id": "qemu",
       "version": "10.0.12",
+      "artifact": "qemu-system-aarch64 pinned launcher",
       "sha256": "2e4246e82d3269b9453ce93cd38df99edd717bfbec721a152dc71e36f1d0ae29",
       "license": null,
       "sbom": null,
@@ -114,6 +222,7 @@
     {
       "id": "qemu-img",
       "version": "10.0.12",
+      "artifact": "qemu-img pinned launcher",
       "sha256": "28741481ba33d8e6dc93e3a07e89b03bfbf87695db919ee71b3fc4d56e32f651",
       "license": null,
       "sbom": null,
@@ -124,6 +233,7 @@
     {
       "id": "linux-kernel",
       "version": "6.18.58-r0",
+      "artifact": "Image",
       "sha256": "849394914e6a93cc9bb17e901f445ce21fcd7e4528541d9496a74d6a6ccee319",
       "license": null,
       "sbom": null,
@@ -133,241 +243,133 @@
     },
     {
       "id": "guest-image",
-      "version": "Alpine 3.24.3 candidate",
+      "version": "Alpine 3.24.3 hb11-candidate-16",
+      "artifact": "root.raw",
       "sha256": "8341f55d5ebe2d382b840a305343d1daf939c9b93610257750dd547c50cb8f7f",
       "license": null,
       "sbom": null,
-      "source": "HB-11 candidate-16 root image; initramfs/data/supervisor hashes in HB-11 evidence",
+      "source": "HB-11 candidate-16 root image; Linux CSV executable is not installed yet",
       "status": "probe",
       "evidence": "doc/verification/HB-11.md"
     },
     {
-      "id": "node-runtime",
-      "version": null,
-      "sha256": null,
+      "id": "guest-initramfs",
+      "version": "hb11-candidate-16",
+      "artifact": "initramfs-hb11",
+      "sha256": "496dc3791054e09142a2721cc9534f050322ad99a621e369a4067706cb10c97c",
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "python-runtime",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "kimi-cli",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "pi",
-      "version": "1.3.0",
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "HB-05 host RPC only; not guest package",
+      "source": "HB-11 candidate-16 initramfs",
       "status": "probe",
-      "evidence": "doc/verification/HB-05.md"
+      "evidence": "doc/verification/HB-11.md"
     },
     {
-      "id": "dsh",
-      "version": null,
+      "id": "guest-data-image",
+      "version": "hb11-candidate-16",
+      "artifact": "data.raw template",
+      "sha256": "e069557a6ad7f9caf7b335eca06de46bf4f9422a93c4fb8e5cb52bcee95709cf",
+      "license": null,
+      "sbom": null,
+      "source": "HB-11 candidate-16 data template; each run requires an independent writable clone",
+      "status": "probe",
+      "evidence": "doc/verification/HB-11.md"
+    },
+    {
+      "id": "builtin-agent",
+      "version": "builtin-agent.mvp.v1-candidate",
+      "artifact": null,
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "source": "MVP-04 implementation gap; no external harness is part of this manifest",
       "status": "pending",
       "evidence": null
     },
     {
-      "id": "builtin-adapter",
-      "version": null,
+      "id": "gateway",
+      "version": "mvp-inference-gateway.v1-candidate",
+      "artifact": null,
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "kimi-adapter",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "pi-adapter",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "dsh-adapter",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "harness-patches",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "llama-runtime",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "local-model",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "model-template",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "mcp-protocol",
-      "version": "2025-06-18",
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "https://modelcontextprotocol.io/specification/2025-06-18",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "mcp-sdk",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "mcp-server",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "source": "MVP-04 fixed Moonshot/OpenAI-compatible gateway implementation gap",
       "status": "pending",
       "evidence": null
     },
     {
       "id": "csv-engine",
-      "version": "hb.csv-engine.v1-candidate",
+      "version": "0.1.0 hb.csv-engine.v1-candidate",
+      "artifact": "guest/csv-engine",
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "source": "HB-13 host-native source candidate; sourceSnapshot binds source, not a Linux executable",
+      "status": "probe",
+      "evidence": "doc/verification/HB-13.md"
+    },
+    {
+      "id": "csv-executable",
+      "version": null,
+      "artifact": "/usr/local/lib/havenbox/csv-engine",
+      "sha256": null,
+      "license": null,
+      "sbom": null,
+      "source": "MVP-03 Linux guest executable and hash are missing; config/cli/template.json names the fixed path",
       "status": "pending",
-      "evidence": null
+      "evidence": "doc/verification/HB-14.md"
     },
     {
       "id": "cli",
-      "version": "hb.cli.v2-candidate",
+      "version": "0.1.0 hb.cli.v2-candidate",
+      "artifact": "hb-cli Linux guest executable",
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "guest/cli deterministic CallPermit implementation; candidate only",
+      "source": "HB-14 host-native candidate; Linux executable/hash and real VM integration are missing",
+      "status": "probe",
+      "evidence": "doc/verification/HB-14.md"
+    },
+    {
+      "id": "cli-template",
+      "version": "hb.cli.v2-candidate",
+      "artifact": "config/cli/template.json",
+      "sha256": "e26336a23be16a62d839935d30c4e3182f39120ccbc4cdb47389fb32bce0ca02",
+      "license": null,
+      "sbom": null,
+      "source": "HB-14 byte-exact fixed inspect template; other CSV tools still require fixed templates in MVP-03",
       "status": "probe",
       "evidence": "doc/verification/HB-14.md"
     },
     {
       "id": "sqlite",
-      "version": null,
-      "sha256": null,
-      "license": null,
+      "version": "3.51.3",
+      "artifact": "Sources/CSQLite/sqlite3.c",
+      "sha256": "9512509b1bccb7461f79bea8aad6280ae4699e925fa4804381b71f59e7efb0c5",
+      "license": "public-domain",
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
-      "id": "watchdog",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
+      "source": "HB-10 pinned official amalgamation; Sources/CSQLite/NOTICE.md",
+      "status": "probe",
+      "evidence": "doc/verification/HB-10.md"
     },
     {
       "id": "supervisor",
       "version": "0.1.0 hb11-candidate-16",
+      "artifact": "/usr/sbin/hb-supervisor",
       "sha256": "09384b5d609b16d574cb3713e2f94085d8c7391fecb4d3ead8724487f5094abf",
       "license": null,
       "sbom": null,
-      "source": "locked offline Rust build-std with Zig 0.17.0 AArch64 musl linker",
+      "source": "HB-11 locked offline Rust build-std with Zig 0.17.0 AArch64 musl linker",
       "status": "probe",
       "evidence": "doc/verification/HB-11.md"
     },
     {
-      "id": "gateway",
-      "version": null,
-      "sha256": null,
-      "license": null,
-      "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
-      "status": "pending",
-      "evidence": null
-    },
-    {
       "id": "check-suite",
       "version": null,
+      "artifact": "doc/verification/MVP-07.md and doc/verification/MVP-08.md",
       "sha256": null,
       "license": null,
       "sbom": null,
-      "source": "pending exact build selection; doc/technical-design.md §10.1",
+      "source": "MVP-07/MVP-08 acceptance evidence does not exist yet; old HB evidence cannot qualify release",
       "status": "pending",
       "evidence": null
     }
@@ -376,7 +378,7 @@
     {
       "id": "config/schemas/compatibility-matrix.schema.json",
       "path": "config/schemas/compatibility-matrix.schema.json",
-      "sha256": "d20642780420ce9cb23f81de0e0da4c266834bd99a7f5e02cb4b77d4736c400f"
+      "sha256": "12d702210878ff2ffc08239305101f9ad50051f37982278b7fb2684f0bb99726"
     },
     {
       "id": "config/schemas/domain.schema.json",
@@ -386,12 +388,12 @@
     {
       "id": "config/schemas/inference-parameter.schema.json",
       "path": "config/schemas/inference-parameter.schema.json",
-      "sha256": "7525751e868a06e9a0de64d85975cc30623ca514e3dd26e994fa81652c081cdd"
+      "sha256": "f3e695cb2fc28d8cde91b6fd809e31ae03aa30cf9b42f74597c194137b6f1283"
     },
     {
       "id": "config/schemas/runtime-manifest.schema.json",
       "path": "config/schemas/runtime-manifest.schema.json",
-      "sha256": "01084804fb12609439d4241a01124de0a73a0e4e02006ce8184a904ac61a2484"
+      "sha256": "643b66265132f5b303764d40a4e5f6e6f4f72c80f04ecf9b663d55b88b6ea605"
     },
     {
       "id": "config/schemas/validation-request.schema.json",
@@ -406,22 +408,22 @@
     {
       "id": "config/inference-parameters.json",
       "path": "config/inference-parameters.json",
-      "sha256": "39bc3b0b4a6e35433cc78b10fe76af8a5c14495b474018d9ab5111ab7b0671b9"
+      "sha256": "09683545aa4d834bcb9e3b77fe8a0b0ca71931f0aee8d4e065521b7d45d022fb"
     },
     {
       "id": "contracts/baseline.py",
       "path": "contracts/baseline.py",
-      "sha256": "7fcbf89ae54d5e08c150f8959a7700b780db1e4f102b223eada11aaba080ab47"
+      "sha256": "886226f0c392b2a46ce02b294564465771dc7a0c04e7a1fcae8633ab6b9660fe"
     },
     {
       "id": "contracts/protocol.md",
       "path": "contracts/protocol.md",
-      "sha256": "c2ea55e83ae581f779ac7df0f998082607754e90375c856177f15273bce67052"
+      "sha256": "6994f05d360a0f421ed529721349ac803b43e3cfc01125e49ad98c32a0f85206"
     },
     {
       "id": "tests/contracts/test_baseline.py",
       "path": "tests/contracts/test_baseline.py",
-      "sha256": "cba8064cdea5996e1c2ce142d6ea019f70562d656026bea2b5911bdd706c56a2"
+      "sha256": "f9011531aee7ae076a07a595710f6a4bbab1f6974502dd218a85cccefb263367"
     },
     {
       "id": "scripts/check-baseline.py",
@@ -431,7 +433,7 @@
     {
       "id": "config/build-toolchain.json",
       "path": "config/build-toolchain.json",
-      "sha256": "4738ec634a00f4c47c02a5d7cc04dde2437d06b02a7dd3edfce0dd289bb2f408"
+      "sha256": "dfa29918eed09aaf0159e42b3556b14c3ce0cabbbd0114d1254bfda919ff8489"
     },
     {
       "id": "contracts/header-vectors.tsv",
@@ -477,21 +479,25 @@
       "id": "tests/generate-header-vectors.py",
       "path": "tests/generate-header-vectors.py",
       "sha256": "9a4d940efdb9c4eb2da80d6f22cd216bae3edc42d0957c943326676d4bf31086"
+    },
+    {
+      "id": "tests/fixtures/csv/check.py",
+      "path": "tests/fixtures/csv/check.py",
+      "sha256": "f1c90611365a2a7f1f4907f7188b6e00a569d007b30425abd681ad3dbb729e42"
     }
   ],
   "unresolved": [
-    "Minimum macOS and 16GiB reference not measured",
-    "HB03 real QEMU/model lifecycle pending",
-    "HB04/HB06 real guest protocol and patches pending",
-    "HB05 guest isolation/context/bridge/recovery pending",
-    "HB07 real model/GPU/offline combination missing",
-    "Remaining dependency licenses, complete SBOM and distribution approval missing",
-    "HB31 functional / HB32 security / HB33 release qualification pending",
-    "HB11 UTM sibling frameworks are not individually manifest-bound; cgroup and project-quota limits are not all deliberately exhausted"
+    "Minimum macOS and 16GiB reference hardware are not measured",
+    "MVP-02 real file boundary and VM task channel are not integrated",
+    "MVP-03 Linux CSV/CLI executables, hashes and all five fixed CLI templates are incomplete",
+    "MVP-04 builtin Agent and fixed inference gateway are not implemented or real-model verified",
+    "Dependency licenses, complete SBOM and distribution approval are incomplete",
+    "QEMU UTM sibling frameworks are not individually manifest-bound; cgroup and project-quota limits are not all deliberately exhausted",
+    "MVP-07 security/fault acceptance and MVP-08 internal-package/user acceptance are missing"
   ],
   "sourceSnapshot": {
-    "baseCommit": "edd3ca25de358e43411da0108c438fea6094ecd5",
-    "sha256": "9315d5940cb2e33f957465a3e8c9ea6c6a2a7c2af40b5721b6254f63c9f75582",
+    "baseCommit": "6e153b1837629020face30b1e6e0344d09abb172",
+    "sha256": "505eb3f151525f0397cea3ef1debcb34c503e396d4e5daaea7ca7cb5ec7bbfea",
     "paths": [
       "Package.swift",
       "Sources/CSQLite/NOTICE.md",

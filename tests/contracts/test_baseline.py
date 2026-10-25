@@ -73,9 +73,7 @@ class BaselineTests(unittest.TestCase):
                 authorize_ordinary(self.manifest, self.matrix, cid, {})
 
     def test_builtin_candidate_and_qualification(self):
-        # Synthetic candidate, not a claim of a verified builtin/model pair.
         c = self.matrix['combinations'][0]
-        c['harness'] = 'builtin'
         check_schema(self.matrix, 'compatibility-matrix')
         with self.assertRaisesRegex(ContractError, 'baseline not frozen'):
             authorize_ordinary(self.manifest, self.matrix, c['id'], {})
@@ -89,16 +87,12 @@ class BaselineTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, 'disabled in this build'):
             authorize_validation(self.manifest, self.matrix, grant, request,
                                  **dict(kwargs, build_flavor='release'))
-        c['harness'] = 'unknown-builtin'
+        c['harness'] = 'kimi-cli'
         with self.assertRaises(ContractError):
             check_schema(self.matrix, 'compatibility-matrix')
 
     def resolved_combination(self):
-        c = self.matrix['combinations'][0]
-        c['adapterRevision'] = 'synthetic-adapter-v1'
-        c['route'].update(providerRevision='synthetic-provider-v1', credentialVersion='test-key-v1',
-                          endpointRevision='test-endpoint-v1', protocol='test-protocol', modelId='test-model')
-        return c
+        return self.matrix['combinations'][0]
 
     def grant_fixture(self):
         c = self.resolved_combination()
@@ -198,6 +192,8 @@ class BaselineTests(unittest.TestCase):
         paths.update(item['path'] for item in self.manifest['contracts'])
         paths.update(['config/runtime-manifest.json', 'config/compatibility-matrix.json',
                       '.github/workflows/engineering.yml'])
+        paths.update(item['path'] for item in self.manifest['endToEndSample']['fixtures'])
+        paths.add(self.manifest['endToEndSample']['expectationsPath'])
         # Keep these explicit so an inventory omission cannot hide the regression.
         paths.add('tests/RuntimeTests/RuntimeTests.swift')
         paths.update(f'guest/{crate}/Cargo.toml' for crate in
@@ -276,6 +272,38 @@ class BaselineTests(unittest.TestCase):
                         path.write_text(original)
                     check_inventory(self.manifest, self.matrix)
 
+    def test_mvp_combination_and_paused_capabilities_fail_closed(self):
+        for field, bad in [('harness', 'dsh'), ('toolEntryPoints', ['mcp']),
+                           ('recovery', 'preview-summary-new-session-no-replay')]:
+            changed = copy.deepcopy(self.matrix)
+            changed['combinations'][0][field] = bad
+            with self.subTest(field=field), self.assertRaises(ContractError):
+                check_schema(changed, 'compatibility-matrix')
+        for field, bad in [('mode', 'local'), ('modelId', 'other-model'),
+                           ('endpoint', 'http://api.moonshot.cn/v1/chat/completions')]:
+            changed = copy.deepcopy(self.matrix)
+            changed['combinations'][0]['route'][field] = bad
+            with self.subTest(field=field), self.assertRaises(ContractError):
+                check_schema(changed, 'compatibility-matrix')
+        changed = copy.deepcopy(self.matrix)
+        changed['combinations'].append(copy.deepcopy(changed['combinations'][0]))
+        with self.assertRaises(ContractError):
+            check_inventory(self.manifest, changed)
+        changed = copy.deepcopy(self.matrix)
+        second = copy.deepcopy(changed['combinations'][0])
+        second['reason'] = 'controlled distinct second combination'
+        changed['combinations'].append(second)
+        with self.assertRaisesRegex(ContractError, 'too many items'):
+            check_schema(changed, 'compatibility-matrix')
+        changed = copy.deepcopy(self.manifest)
+        changed['releaseQualification']['developmentGrantReleaseEligible'] = True
+        with self.assertRaises(ContractError):
+            check_schema(changed, 'runtime-manifest')
+        changed = copy.deepcopy(self.manifest)
+        changed['endToEndSample']['fixtures'][0]['sha256'] = '0' * 64
+        with self.assertRaisesRegex(ContractError, 'fixture drift'):
+            check_inventory(changed, self.matrix)
+
     def test_trusted_evidence_and_version_drift(self):
         # Entirely fabricated fixtures, never persisted to the product matrix.
         c = self.resolved_combination()
@@ -287,15 +315,26 @@ class BaselineTests(unittest.TestCase):
         for dep in self.manifest['dependencies']:
             dep.update(version='test-v1', sha256='0'*64, license='test-only', sbom='test-sbom')
         c['state'] = 'validated'
-        c['evidence'] = {gate: 'test-' + gate for gate in ('functional', 'security', 'release')}
-        records = {receipt: {'binding': binding(self.manifest, c), 'gate': gate, 'result': 'pass'}
-                   for gate, receipt in c['evidence'].items()}
+        c['evidence'] = {gate: 'test-' + gate for gate in ('mvp07', 'mvp08')}
+        records = {
+            receipt: {'binding': binding(self.manifest, c), 'gate': gate,
+                      'task': 'MVP-07' if gate == 'mvp07' else 'MVP-08', 'result': 'pass'}
+            for gate, receipt in c['evidence'].items()
+        }
         authorize_ordinary(self.manifest, self.matrix, c['id'], records)
         for gate in c['evidence']:
             bad = copy.deepcopy(records)
             bad[c['evidence'][gate]]['result'] = 'unknown'
             with self.assertRaises(ContractError):
                 authorize_ordinary(self.manifest, self.matrix, c['id'], bad)
+            bad = copy.deepcopy(records)
+            bad[c['evidence'][gate]]['task'] = 'HB-32'
+            with self.assertRaisesRegex(ContractError, 'wrong-task'):
+                authorize_ordinary(self.manifest, self.matrix, c['id'], bad)
+        bad = copy.deepcopy(records)
+        bad[c['evidence']['mvp07']] = {'validationRunGrant': 'development-only'}
+        with self.assertRaises(ContractError):
+            authorize_ordinary(self.manifest, self.matrix, c['id'], bad)
         for field in ('version', 'sha256', 'license', 'sbom'):
             changed = copy.deepcopy(self.manifest)
             changed['dependencies'][0][field] = '1'*64 if field == 'sha256' else 'changed'
@@ -373,7 +412,11 @@ class BaselineTests(unittest.TestCase):
             return normalize_parameters(self.parameters, supplied, input_tokens=n,
                                         template_tokens=100, tool_tokens=100)
         self.assertEqual(normalize({})['effective']['maxOutputTokens'], 2048)
-        for bad in ({'unknown': 1}, {'temperature': 0.5}, {'reasoningEffort': 'high'},
+        self.assertEqual(normalize({})['effective']['reasoningEffort'], 'low')
+        self.assertEqual(normalize({'reasoningEffort': 'high'})['effective']['reasoningEffort'], 'high')
+        self.assertEqual(self.parameters['protocol']['maxOutputTokensField'], 'max_completion_tokens')
+        self.assertEqual(self.parameters['protocol']['responseFormat'], 'json_schema')
+        for bad in ({'unknown': 1}, {'temperature': 0.5}, {'reasoningEffort': 'extreme'},
                     {'maxOutputTokens': True}, {'contextTokens': 9000}, {'maxOutputTokens': -1}):
             with self.assertRaises(ContractError):
                 normalize(bad)

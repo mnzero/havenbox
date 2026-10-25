@@ -1,7 +1,7 @@
 # havenbox
 安全、易用的桌面 Agent 工作空间。敏感凭证不进入隔离环境。
 
-当前 MVP 只交付一条可验证链路：内置 Agent 使用一个冻结的联网模型，在无网卡 Linux 虚拟机中调用确定性 CSV CLI。用户明确批准模型可见的数据和工具计划，检查成果后再导出。Kimi CLI、Pi、DeepSeek Harness、本地模型、MCP 和多会话已移到 MVP 之后。
+当前 MVP 只交付一条可验证链路：内置 Agent 使用 Moonshot AI Kimi API 的 `kimi-k3.1-pro`，经 OpenAI 兼容 `https://api.moonshot.cn/v1/chat/completions`，在无网卡 Linux 虚拟机中调用确定性 CSV CLI。用户明确批准模型可见的数据和工具计划，检查成果后再导出。Kimi CLI、Pi、DeepSeek Harness、本地模型、MCP 和多会话已移到 MVP 之后；当前只是 MVP-01 唯一候选基线，真实模型、VM、CLI 与发布验收仍未完成。
 
 ## 项目文档
 
@@ -35,7 +35,7 @@ python3 scripts/test-environment.py --loopback --report-dir .build/test-environm
 
 ### 固定构建环境与命令
 
-Apple Silicon macOS；预先准备 `config/build-toolchain.json` 的精确工具链：Apple Swift 6.3.3 (swiftlang-6.3.3.1.3)、Rust/Cargo 1.99.1 Homebrew 构建、Python 3.15.0、macOS SDK 26.5。构建脚本校验版本，缺失/不匹配直接失败，**不安装、不升级、不下载**。SDK 默认 `/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`；可通过 `SDKROOT` 指定同版本目录，通过 `HB_SWIFTC` 指定同版本编译器。macOS 14 仅部署目标，未验最低系统。
+Apple Silicon macOS；预先准备 `config/build-toolchain.json` 的精确工具链：Apple Swift 6.3.3 (swiftlang-6.3.3.1.3)、Rust/Cargo 1.99.1 Homebrew 构建、Python 3.15.0、macOS SDK 26.5；Linux guest 资产构建另固定 Zig 0.17.0 和 e2fsprogs 1.47.4。宿主工程脚本校验其使用的版本，缺失/不匹配直接失败，**不安装、不升级、不下载**。SDK 默认 `/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`；可通过 `SDKROOT` 指定同版本目录，通过 `HB_SWIFTC` 指定同版本编译器。macOS 14 仅部署目标，未验最低系统。
 
 ```sh
 python3 scripts/engineering.py build    # 实编 Swift app/core/helper/测试体，Rust host-native release
@@ -56,13 +56,15 @@ CI 使用固定 SHA 的 checkout action，并显式 checkout 事件 SHA（`githu
 
 `hb11-candidate-16` 已真实运行三条 virtio-serial 通道、单调 host/guest lease、cgroup-before-exec、namespace/chroot/降权、固定 seccomp、角色文件隔离、每流 1 MiB 上限和正常或强杀清理。复用入口见 [HB-02 本地资产](doc/runbooks/hb02-local-vm-assets.md) 与 [HB-11 真实复验](doc/runbooks/hb11-real-runtime.md)。剩余边界包括 sibling UTM frameworks 的逐文件绑定、各类 cgroup 和 quota 分项超限，以及 MVP 真实文件和模型链路；详见 [HB-11 验证记录](doc/verification/HB-11.md)。
 
-## HB-08 候选契约检查
+## MVP-01 唯一组合与契约检查
 
 ```sh
+python3 scripts/check-development-plan.py
 python3 scripts/check-baseline.py
+python3 tests/fixtures/csv/check.py
 ```
 
-仅使用 Python 标准库，执行清单/schema、证据失效和 ValidationRunGrant 的离线回归；不下载、不调用模型、不启动沙箱。通过不代表产品验收或基线冻结；当前所有候选组合均不可供普通用户执行。详见 [HB-08 证据](doc/verification/HB-08.md)、[协议与领域契约](contracts/protocol.md) 和 [正式构建依赖清单](doc/build-dependencies.md)。
+仅使用 Python 标准库，执行唯一组合、清单/schema、fixture 哈希、MVP-07/08 证据和 ValidationRunGrant 的离线回归；不下载、不调用模型、不启动沙箱。当前只有 `builtin-kimi-k3-1-pro-csv` 一个候选，普通执行和发布资格均关闭；开发 ValidationRunGrant 不能进入发布。固定样例引用 `valid-sales.csv` 与 `duplicate-keys.csv`，锚定总额 700.00、排除负数后 720.00、分组和重复键结果。详见 [MVP-01 证据](doc/verification/MVP-01.md)、[协议与领域契约](contracts/protocol.md) 和 [正式构建依赖清单](doc/build-dependencies.md)。旧 `config/runtime-candidates.json` 与 HB 证据仅作历史输入保留。
 
 ## AI 编程协作
 

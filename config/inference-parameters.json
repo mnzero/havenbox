@@ -1,6 +1,6 @@
 {
   "schemaVersion": "hb.inference-parameters.v1",
-  "revision": "candidate-policy-1",
+  "revision": "mvp01-kimi-k3-1-pro-1",
   "status": "candidate",
   "fields": {
     "contextTokens": {
@@ -23,27 +23,40 @@
     },
     "temperature": {
       "supported": false,
-      "default": 1,
+      "default": "omitted",
       "valueSchema": {
-        "type": "number",
-        "minimum": 0,
-        "maximum": 2
+        "enum": [
+          "omitted"
+        ]
       }
     },
     "reasoningEffort": {
-      "supported": false,
-      "default": "unsupported",
+      "supported": true,
+      "default": "low",
       "valueSchema": {
         "enum": [
-          "unsupported"
+          "low",
+          "high",
+          "max"
         ]
       }
     }
   },
-  "mutuallyExclusive": [
-    [
+  "mutuallyExclusive": [],
+  "protocol": {
+    "maxOutputTokensField": "max_completion_tokens",
+    "reasoningEffortField": "reasoning_effort",
+    "responseFormat": "json_schema",
+    "toolMode": "strict-function",
+    "stream": true,
+    "streamOptions": {
+      "includeUsage": true
+    },
+    "omittedParameters": [
       "temperature",
-      "reasoningEffort"
+      "top_p",
+      "presence_penalty",
+      "frequency_penalty"
     ]
-  ]
+  }
 }

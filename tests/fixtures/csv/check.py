@@ -138,13 +138,15 @@ def main():
         if actual != case['expected']:
             raise ValueError(f"{case['id']}: expected {case['expected']!r}, actual {actual!r}")
         print(f"{case['id']}: {json.dumps(actual, sort_keys=True)}")
-    config = json.loads((ROOT.parents[2] / 'config/runtime-candidates.json').read_text())
-    for combo in config['combinations']:
-        if combo['status'] != 'untested' or combo['evidence'] is not None:
-            raise ValueError(f"HB-01 has no combination probe evidence: {combo['id']}")
+    config = json.loads((ROOT.parents[2] / 'config/compatibility-matrix.json').read_text())
+    combinations = config['combinations']
+    if [combo['id'] for combo in combinations] != ['builtin-kimi-k3-1-pro-csv']:
+        raise ValueError('MVP must have exactly one builtin/Kimi/CSV combination')
+    if any(combo['evidence'] != {'mvp07': None, 'mvp08': None} for combo in combinations):
+        raise ValueError('MVP-01 must not fabricate MVP-07/MVP-08 evidence')
     print(f"HB-01: {len(expected['cases'])} fixture cases and {len(csv_names)} CSV hashes match; "
-          f"{len(config['combinations'])} combinations remain untested.")
-    print('Fixture arithmetic only; product errors, MCP/CLI, injection resistance and runtime compatibility are untested.')
+          'one MVP combination remains unqualified.')
+    print('Fixture arithmetic only; real model, VM, CLI, injection resistance and release acceptance are untested.')
 
 
 if __name__ == '__main__':

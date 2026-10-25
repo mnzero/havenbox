@@ -1,6 +1,6 @@
 # MVP 构建依赖清单
 
-机器清单以 [`config/runtime-manifest.json`](../config/runtime-manifest.json) 为准。该清单仍包含旧范围的候选项，MVP-01 负责将发布资格收窄到本页列出的依赖。
+机器清单以 [`config/runtime-manifest.json`](../config/runtime-manifest.json) 为准。MVP-01 已将依赖和发布资格收窄到本页列出的唯一组合；旧外部 harness、本地模型和 MCP 只保留在历史候选文件中。
 
 本页定义依赖的交付位置和冻结条件。它不是安装脚本，也不证明产品基线已经通过。实际编译环境见 [`config/build-toolchain.json`](../config/build-toolchain.json)。工程检查入口为 `python3 scripts/engineering.py check`。
 
@@ -8,7 +8,7 @@
 
 | 交付位置 | 依赖 | 当前状态和冻结条件 |
 | --- | --- | --- |
-| 构建机 | Swift、macOS SDK、Rust 和 Python | 已有固定候选版本；需要保留版本检查、离线构建和来源记录 |
+| 构建机 | Swift、macOS SDK、Rust、Python、Zig 和 e2fsprogs | 已有固定候选版本；需要保留版本检查、离线构建和来源记录，Zig/e2fsprogs 用于 Linux guest 资产 |
 | 宿主包 | SwiftUI、AppKit 和 Keychain 系统 API | 最低系统为候选 macOS 14；需要在参考设备实测 |
 | 宿主包 | QEMU、`qemu-img`、HVF entitlement 和 watchdog | 已有 UTM QEMU 候选证据；需要冻结二进制、动态依赖、entitlement、许可证和摘要 |
 | 宿主包 | SQLite 3.51.3 | 已固定官方 C 源码；需要保留 source ID、摘要、WAL 和 backup 回归 |

@@ -100,7 +100,8 @@ public struct ConfigurationChecker {
         let latest = try await compatibility?.compatibilityCheck(digest: digest, suiteVersion: suiteVersion)
         let status = latest?.status ?? "unknown"
         // This candidate has no frozen runtime/qualification evidence. A stored pass is not a
-        // ValidationRunGrant and must never enable normal execution (HB17/HB31 own that gate).
+        // ValidationRunGrant and must never enable normal execution. MVP-04 owns the builtin
+        // Agent/gateway; MVP-07/MVP-08 own release qualification.
         return ConfigurationCheckState(credentialExists: true, connected: true, capabilitiesKnown: capabilityMatch, combinationPassed: false, capabilityStatus: capabilityMatch ? "verified" : (model.capabilities.isEmpty ? "unverified" : "declared"), compatibilityStatus: status)
     }
     public static let fixedPrompt = ConfigurationValidator.fixedTestPrompt
