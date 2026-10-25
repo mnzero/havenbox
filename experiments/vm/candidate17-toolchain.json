@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "havenbox.candidate17-toolchain.v1",
+  "macos": {
+    "deploymentTarget": "14.0",
+    "sdkPath": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "sdkVersion": "26.5",
+    "sourceDateEpoch": 1772830800
+  },
+  "utm": {
+    "dmg": {
+      "name": "UTM-5.0.8.dmg",
+      "sha256": "7b2d7b2e2a02b3de1757ef19a8f36573e6d9cceae8c8cca0abcbcaa4a852019a"
+    },
+    "frameworkCompatibilityMinOS": "12.0",
+    "frameworkSources": {
+      "qemu-aarch64-softmmu": "16d48f6e3e83fdabb760ac01f17f2c69af844f3403be77fad51c692189896f5f",
+      "qemu-img-framework": "dfbb592963ff99cee305222358d02580c2f0898c04306f9d9b926a0e53ad875d"
+    },
+    "artifacts": {
+      "qemu-system-aarch64": "0cdac65d338d3bd1958df4ab91045b08aa0c7146afce4e372578c729b5cbd806",
+      "qemu-img": "ffd34c8655399f25728de1f5ca6c95b78153d7a5334f88010fc391b244c39c4f",
+      "qemu-aarch64-softmmu": "661ad9619bb82d332dbf05906f0ecbcabfc35a561fd6a1cdb513632bc530c8d5",
+      "qemu-img-framework": "f38a5c00ec74eb8e164a7b98458822d28a4b170b9b15e11820f4695ab58b16b2"
+    }
+  },
+  "e2fsprogs": {
+    "version": "1.47.4",
+    "sourceUrl": "https://www.kernel.org/pub/linux/kernel/people/tytso/e2fsprogs/v1.47.4/e2fsprogs-1.47.4.tar.xz",
+    "sourceSha256": "fd5bf388cbdbe006a3d3b318d983b2948382440acc85a87f1e7d108653e8db0b",
+    "sha256sumsSha256": "0259700d11fce6ef72001e131f1efd714815fef53559555f069539eee9a91cb7",
+    "detachedSignatureSha256": "ff826cf86828bf3ed8a7fcbe3e5c0c171f8ebfc5f46c43b27adc1ffc2c6a7b9c",
+    "artifacts": {
+      "mke2fs": "fbaccbd585defb2ea8a4cc887e2a3b0d8eeead1a87aba8c891133397c826976a",
+      "debugfs": "da5fd75e391994d52ee0ac939b1bde03811d5ac419fb7548a712e1d0f4415eee",
+      "e2fsck": "e08604ae9518a551aa95ff15b274796148455341a87e1cfac96a92ab25f20d2b",
+      "mke2fs.conf": "c998d64f9b58c2235186f8ee75ba602d1fdb2991d94695fd687ab0e8096b6727"
+    },
+    "verificationLimit": "No GPG verifier or trusted keyring was available; provenance is limited to official HTTPS, pinned SHA-256, and matching content inside the clearsigned checksum file."
+  },
+  "hb02Replay": {
+    "verifiedAt": "2026-10-25T08:47:04Z",
+    "receipt": "experiments/vm/assets/hb02-replay/candidate17-hb02-replay-receipt.json",
+    "artifacts": {
+      "Image": "849394914e6a93cc9bb17e901f445ce21fcd7e4528541d9496a74d6a6ccee319",
+      "initramfs-hb02": "8c6c30aaf4737646496a273cc0cafdb5a7f96de25e23da8cdf8973d479e9b530",
+      "root.raw": "341c74a04a9a88f94a9987809490170d8eba497d3598b2329458724313c2728d",
+      "state/hb02-replay-data.raw": "ce1809621bb6d9fa9eaa86100b25a45fb3a740cbe0d8d826231802f44f8b3ece"
+    },
+    "evidence": {
+      "firstBoot": "persistence=created root_readonly=true network=loopback-only shared_mounts=none",
+      "secondBoot": "persistence=present root_readonly=true network=loopback-only shared_mounts=none",
+      "kernelProbe": "cgroup2=cpu,memory,pids cgroup_admit=true cgroup_kill_empty=true namespaces=mount,network,ipc privilege_drop=10001:10001",
+      "lifecycle": "all three stops removed the verified process group and pidfile"
+    }
+  }
+}

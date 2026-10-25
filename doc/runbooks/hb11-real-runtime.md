@@ -25,16 +25,18 @@ guest/image/build-supervisor.sh
 镜像入口是：
 
 ```sh
-PATH="$PWD/experiments/vm/tools:$PATH" guest/image/build-image.sh \
+guest/image/build-image.sh \
   --minirootfs experiments/vm/assets/hb02-cache/downloads/alpine-minirootfs-3.24.3-aarch64.tar.gz \
   --kernel-apk experiments/vm/assets/hb02-cache/downloads/linux-virt-6.18.58-r0.apk \
   --supervisor guest/target/aarch64-unknown-linux-musl/release/hb-supervisor \
   --output experiments/vm/assets/hb11-candidate-N \
+  --mke2fs experiments/vm/tools/mke2fs \
+  --mke2fs-config experiments/vm/tools/mke2fs.conf \
   --debugfs experiments/vm/tools/debugfs \
   --e2fsck experiments/vm/tools/e2fsck
 ```
 
-输出目录必须是新目录。脚本校验上游 hash、ext4 一致性和所有可见 inode 的 0:0 所有权，失败时不会发布部分目录，并将四个镜像产物设为 `0444`。运行时必须把 data 模板复制成单独的 `0600` 文件。
+输出目录必须是新目录。四个 e2fsprogs 输入都必须是显式的普通文件；脚本不从 `PATH` 查找 `mke2fs`，也不读取宿主全局 `mke2fs.conf`。脚本校验上游 hash、ext4 一致性和所有可见 inode 的 0:0 所有权，失败时不会发布部分目录，并将四个镜像产物设为 `0444`。运行时必须把 data 模板复制成单独的 `0600` 文件。
 
 ## 验证 guest 通道和隔离
 

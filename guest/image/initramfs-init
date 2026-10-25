@@ -9,7 +9,8 @@ fail() {
 }
 
 mkdir -p /dev /proc /sys /newroot
-mount -t devtmpfs devtmpfs /dev
+mount -t devtmpfs -o nosuid,noexec,size=65536k,nr_inodes=16384,mode=755 devtmpfs /dev
+mount -o remount,nosuid,noexec,size=65536k,nr_inodes=16384,mode=755 devtmpfs /dev
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 for module in virtio_blk crc16 mbcache jbd2 quota_tree quota_v2 ext4; do

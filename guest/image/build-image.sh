@@ -3,7 +3,7 @@ set -euo pipefail
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 usage() {
-  printf '%s\n' "usage: $0 --minirootfs FILE --kernel-apk FILE --supervisor FILE --output DIR --debugfs FILE --e2fsck FILE" >&2
+  printf '%s\n' "usage: $0 --minirootfs FILE --kernel-apk FILE --supervisor FILE --output DIR --mke2fs FILE --mke2fs-config FILE --debugfs FILE --e2fsck FILE" >&2
   exit 2
 }
 
@@ -11,6 +11,8 @@ minirootfs=
 kernel_apk=
 supervisor=
 output=
+mke2fs=
+mke2fs_config=
 debugfs=
 e2fsck=
 while (($#)); do
@@ -19,12 +21,22 @@ while (($#)); do
     --kernel-apk) kernel_apk=${2:-}; shift 2 ;;
     --supervisor) supervisor=${2:-}; shift 2 ;;
     --output) output=${2:-}; shift 2 ;;
+    --mke2fs) mke2fs=${2:-}; shift 2 ;;
+    --mke2fs-config) mke2fs_config=${2:-}; shift 2 ;;
     --debugfs) debugfs=${2:-}; shift 2 ;;
     --e2fsck) e2fsck=${2:-}; shift 2 ;;
     *) usage ;;
   esac
 done
 [[ -f "$minirootfs" && -f "$kernel_apk" && -f "$supervisor" && -n "$output" ]] || usage
+[[ -n "$mke2fs" && -f "$mke2fs" && ! -L "$mke2fs" && -x "$mke2fs" ]] || {
+  echo "blocked: image build requires an explicit pinned mke2fs" >&2
+  exit 3
+}
+[[ -n "$mke2fs_config" && -f "$mke2fs_config" && ! -L "$mke2fs_config" ]] || {
+  echo "blocked: image build requires an explicit pinned mke2fs.conf" >&2
+  exit 3
+}
 [[ -n "$debugfs" && -f "$debugfs" && ! -L "$debugfs" && -x "$debugfs" ]] || {
   echo "blocked: image build requires a pinned debugfs for ownership verification" >&2
   exit 3
@@ -34,7 +46,7 @@ done
   exit 3
 }
 [[ ! -e "$output" ]] || { echo "blocked: output already exists" >&2; exit 3; }
-for command in mke2fs cpio file gzip tar shasum; do
+for command in file gzip python3 tar shasum; do
   command -v "$command" >/dev/null || { echo "blocked: $command is required" >&2; exit 3; }
 done
 
@@ -111,12 +123,25 @@ for applet in sh mkdir mount umount insmod sleep switch_root; do ln -s busybox "
 ln -s ../bin/busybox "$work/init/sbin/poweroff"
 
 export COPYFILE_DISABLE=1
-find "$work/root" -exec touch -h -t 202610240000 {} +
-find "$work/init" -exec touch -h -t 202610240000 {} +
-(cd "$work/init" && find . -print | LC_ALL=C sort | cpio -o -H newc 2>/dev/null) | gzip -9n >"$artifacts/initramfs-hb11"
+# This is 2026-10-24T00:00:00Z, the frozen candidate-17 source date.
+image_epoch=1792800000
+# UUIDv5(DNS, "havenbox.dev/hb11/{root,data}.raw") makes the identities stable,
+# auditable, and distinct without consulting host randomness.
+root_uuid=b0e87f5b-28ba-5ca5-ba8d-2a0e2c18bdc6
+data_uuid=50718f8a-aea7-55d6-a82a-ddd4cedd8e5d
+TZ=UTC find "$work/root" -exec touch -h -t 202610240000 {} +
+TZ=UTC find "$work/init" -exec touch -h -t 202610240000 {} +
+python3 "$root/guest/image/deterministic-newc.py" \
+  --root "$work/init" --mtime "$image_epoch" | gzip -9n >"$artifacts/initramfs-hb11"
 install -m 0644 "$work/kernel/boot/vmlinuz-virt" "$artifacts/Image"
-mke2fs -q -t ext4 -L hb11-root -d "$work/root" "$artifacts/root.raw" 256M
-mke2fs -q -t ext4 -O project,quota -E quotatype=prjquota -L hb11-data "$artifacts/data.raw" 256M
+export E2FSPROGS_FAKE_TIME=$image_epoch
+export SOURCE_DATE_EPOCH=$image_epoch
+MKE2FS_CONFIG="$mke2fs_config" "$mke2fs" -q -t ext4 -L hb11-root -U "$root_uuid" \
+  -E "hash_seed=$root_uuid,lazy_itable_init=0,lazy_journal_init=0,nodiscard,root_owner=0:0" \
+  -d "$work/root" "$artifacts/root.raw" 256M
+MKE2FS_CONFIG="$mke2fs_config" "$mke2fs" -q -t ext4 -O project,quota \
+  -E "quotatype=prjquota,hash_seed=$data_uuid,lazy_itable_init=0,lazy_journal_init=0,nodiscard,root_owner=0:0" \
+  -L hb11-data -U "$data_uuid" "$artifacts/data.raw" 256M
 for filesystem in "$artifacts/root.raw" "$artifacts/data.raw"; do
   set +e
   "$e2fsck" -f -y "$filesystem"
@@ -129,13 +154,16 @@ for filesystem in "$artifacts/root.raw" "$artifacts/data.raw"; do
 done
 if ((EUID == 0)); then
   python3 "$root/guest/image/normalize-ext4.py" --debugfs "$debugfs" \
-    --image "$artifacts/root.raw" --minimum-inodes 100
+    --image "$artifacts/root.raw" --minimum-inodes 100 \
+    --expected-uuid "$root_uuid" --timestamp "$image_epoch"
 else
   python3 "$root/guest/image/normalize-ext4.py" --debugfs "$debugfs" \
-    --image "$artifacts/root.raw" --minimum-inodes 100 --normalize
+    --image "$artifacts/root.raw" --minimum-inodes 100 --normalize \
+    --expected-uuid "$root_uuid" --timestamp "$image_epoch"
 fi
 python3 "$root/guest/image/normalize-ext4.py" --debugfs "$debugfs" \
-  --image "$artifacts/data.raw" --minimum-inodes 2
+  --image "$artifacts/data.raw" --minimum-inodes 2 \
+  --expected-uuid "$data_uuid" --timestamp "$image_epoch"
 for filesystem in "$artifacts/root.raw" "$artifacts/data.raw"; do
   "$e2fsck" -f -n "$filesystem" >/dev/null || {
     echo "blocked: final ext4 consistency check failed" >&2
