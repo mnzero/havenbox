@@ -6,15 +6,11 @@ use crate::{Supervisor, TaskCgroup, process::SandboxLauncher};
 mod linux {
     use super::*;
     use hb_protocol::{Channel, Direction, Frame, FrameReader, MessageKind, RequestRegistry};
-    use std::fs::{File, OpenOptions};
+    use std::fs::File;
     use std::io::Write;
     use std::os::fd::AsRawFd;
     use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, TrySendError, sync_channel};
     use std::time::{Duration, Instant};
-
-    const CONTROL: &str = "/dev/virtio-ports/hb.control";
-    const FILE: &str = "/dev/virtio-ports/hb.file";
-    const INFERENCE: &str = "/dev/virtio-ports/hb.inference";
 
     pub fn run(
         instance: [u8; 16],
@@ -41,9 +37,11 @@ mod linux {
         crate::inspect_live_boot()?;
         let launcher = SandboxLauncher::start()?;
         let mut broker = BrokerGuard::new(launcher.broker_pid()?, launcher.broker_control()?);
-        let control = channel(CONTROL)?;
-        let file = channel(FILE)?;
-        let inference = channel(INFERENCE)?;
+        let crate::virtio_channel::Channels {
+            control,
+            file,
+            inference,
+        } = crate::virtio_channel::open_fixed_channels()?;
         let writer = writer(control.try_clone().map_err(crate::io)?);
         let control_rx = reader(control, epoch, Channel::Control, Direction::HostToGuest, 16);
         let file_rx = reader(file, epoch, Channel::File, Direction::HostToGuest, 2);
@@ -173,41 +171,6 @@ mod linux {
                 }
             }
         }
-    }
-
-    fn channel(path: &str) -> Result<File, Error> {
-        let path = std::path::Path::new(path);
-        let expected_name = path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or(Error::Boundary)?;
-        let link = std::fs::symlink_metadata(path).map_err(crate::io)?;
-        let target = path.canonicalize().map_err(crate::io)?;
-        let target_name = target
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or(Error::Boundary)?;
-        if !link.file_type().is_symlink()
-            || target.parent() != Some(std::path::Path::new("/dev"))
-            || !target_name.starts_with("vport")
-            || !target
-                .metadata()
-                .map_err(crate::io)?
-                .file_type()
-                .is_char_device()
-        {
-            return Err(Error::Boundary);
-        }
-        let sysfs = std::path::Path::new("/sys/class/virtio-ports").join(target_name);
-        let registered = std::fs::read_to_string(sysfs.join("name")).map_err(crate::io)?;
-        if registered.trim_end() != expected_name {
-            return Err(Error::Boundary);
-        }
-        OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(path)
-            .map_err(crate::io)
     }
 
     fn reader(
@@ -346,8 +309,6 @@ mod linux {
         request[15] = request[15].wrapping_add(increment);
         if request == [0; 16] { [1; 16] } else { request }
     }
-
-    use std::os::unix::fs::FileTypeExt;
 }
 
 pub fn run(

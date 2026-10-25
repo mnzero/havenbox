@@ -1,10 +1,342 @@
 //! Candidate supervisor policy. Production task admission stays closed until Linux integration.
+#[cfg(all(target_os = "linux", not(target_arch = "aarch64")))]
+compile_error!("hb-supervisor supports Linux only with the AArch64 open(2) ABI");
+
+mod aarch64_linux_open_flags;
+pub mod file_runtime;
 pub(crate) mod policy;
 pub mod process;
 pub(crate) mod quota;
 pub mod runtime;
 pub mod sandbox;
 pub(crate) mod seccomp;
+pub mod task_channel;
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+pub(crate) mod virtio_channel {
+    use super::Error;
+    use std::fs::{File, OpenOptions};
+    use std::os::unix::fs::{FileTypeExt, MetadataExt, OpenOptionsExt};
+    use std::path::PathBuf;
+    use std::time::Duration;
+
+    pub(crate) struct Roots {
+        links: PathBuf,
+        devices: PathBuf,
+        sysfs: PathBuf,
+        target_prefix: &'static str,
+    }
+
+    impl Roots {
+        pub(crate) fn system() -> Self {
+            Self {
+                links: PathBuf::from("/dev/virtio-ports"),
+                devices: PathBuf::from("/dev"),
+                sysfs: PathBuf::from("/sys/class/virtio-ports"),
+                target_prefix: "vport",
+            }
+        }
+
+        #[cfg(test)]
+        fn fixture(
+            links: &std::path::Path,
+            devices: &std::path::Path,
+            sysfs: &std::path::Path,
+            target_prefix: &'static str,
+        ) -> Self {
+            Self {
+                links: links.to_path_buf(),
+                devices: devices.to_path_buf(),
+                sysfs: sysfs.to_path_buf(),
+                target_prefix,
+            }
+        }
+    }
+
+    pub(crate) struct Channels {
+        pub(crate) control: File,
+        pub(crate) file: File,
+        pub(crate) inference: File,
+    }
+
+    pub(crate) fn open_fixed_channels() -> Result<Channels, Error> {
+        open_fixed_channels_with_pause(
+            &Roots::system(),
+            41,
+            Duration::from_millis(25),
+            std::thread::sleep,
+        )
+    }
+
+    fn open_fixed_channels_with_pause<F>(
+        roots: &Roots,
+        attempts: usize,
+        delay: Duration,
+        mut pause: F,
+    ) -> Result<Channels, Error>
+    where
+        F: FnMut(Duration),
+    {
+        let mut last_error = Error::Boundary;
+        for attempt in 0..attempts {
+            let opened = (|| {
+                Ok(Channels {
+                    control: open_channel_at_with_hook(roots, "hb.control", || {})?,
+                    file: open_channel_at_with_hook(roots, "hb.file", || {})?,
+                    inference: open_channel_at_with_hook(roots, "hb.inference", || {})?,
+                })
+            })();
+            match opened {
+                Ok(channels) => return Ok(channels),
+                Err(error) => last_error = error,
+            }
+            if attempt + 1 < attempts {
+                pause(delay);
+            }
+        }
+        Err(last_error)
+    }
+
+    fn open_channel_at_with_hook<F>(
+        roots: &Roots,
+        expected_name: &str,
+        before_open: F,
+    ) -> Result<File, Error>
+    where
+        F: FnOnce(),
+    {
+        let link_path = roots.links.join(expected_name);
+        let link_before = std::fs::symlink_metadata(&link_path).map_err(crate::io)?;
+        if !link_before.file_type().is_symlink() {
+            return Err(Error::Boundary);
+        }
+        let target = std::fs::read_link(&link_path).map_err(crate::io)?;
+        let target_name = target
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or(Error::Boundary)?;
+        if !target.is_absolute()
+            || target.parent() != Some(roots.devices.as_path())
+            || !target_name.starts_with(roots.target_prefix)
+        {
+            return Err(Error::Boundary);
+        }
+
+        let port = roots.sysfs.join(target_name);
+        let registered_name = read_sysfs_value(&port.join("name"))?;
+        let registered_device = read_sysfs_value(&port.join("dev"))?;
+        let expected_device = parse_device(&registered_device)?;
+        if registered_name != expected_name {
+            return Err(Error::Boundary);
+        }
+
+        let target_before = std::fs::symlink_metadata(&target).map_err(crate::io)?;
+        if target_before.file_type().is_symlink() || !target_before.file_type().is_char_device() {
+            return Err(Error::Boundary);
+        }
+        before_open();
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .custom_flags(no_follow_flag())
+            .open(&target)
+            .map_err(crate::io)?;
+        let opened = file.metadata().map_err(crate::io)?;
+        if !opened.file_type().is_char_device()
+            || device_numbers(opened.rdev()) != expected_device
+            || (opened.dev(), opened.ino(), opened.rdev())
+                != (
+                    target_before.dev(),
+                    target_before.ino(),
+                    target_before.rdev(),
+                )
+        {
+            return Err(Error::Boundary);
+        }
+
+        let link_after = std::fs::symlink_metadata(&link_path).map_err(crate::io)?;
+        let target_after = std::fs::symlink_metadata(&target).map_err(crate::io)?;
+        if !link_after.file_type().is_symlink()
+            || (link_after.dev(), link_after.ino()) != (link_before.dev(), link_before.ino())
+            || std::fs::read_link(&link_path).map_err(crate::io)? != target
+            || (target_after.dev(), target_after.ino(), target_after.rdev())
+                != (opened.dev(), opened.ino(), opened.rdev())
+            || !target_after.file_type().is_char_device()
+            || read_sysfs_value(&port.join("name"))? != registered_name
+            || read_sysfs_value(&port.join("dev"))? != registered_device
+        {
+            return Err(Error::Boundary);
+        }
+        Ok(file)
+    }
+
+    fn read_sysfs_value(path: &std::path::Path) -> Result<String, Error> {
+        let value = std::fs::read_to_string(path).map_err(crate::io)?;
+        let value = value.strip_suffix('\n').unwrap_or(&value);
+        if value.is_empty() || value.contains(['\n', '\r']) {
+            return Err(Error::Boundary);
+        }
+        Ok(value.to_owned())
+    }
+
+    fn parse_device(value: &str) -> Result<(u64, u64), Error> {
+        let (major, minor) = value.split_once(':').ok_or(Error::Boundary)?;
+        let major = parse_decimal(major)?;
+        let minor = parse_decimal(minor)?;
+        Ok((major, minor))
+    }
+
+    fn parse_decimal(value: &str) -> Result<u64, Error> {
+        let parsed = value.parse::<u64>().map_err(|_| Error::Boundary)?;
+        if parsed.to_string() != value {
+            return Err(Error::Boundary);
+        }
+        Ok(parsed)
+    }
+
+    #[cfg(target_os = "linux")]
+    const fn no_follow_flag() -> i32 {
+        crate::aarch64_linux_open_flags::O_NOFOLLOW
+    }
+
+    #[cfg(target_os = "macos")]
+    const fn no_follow_flag() -> i32 {
+        0x0000_0100
+    }
+
+    #[cfg(target_os = "linux")]
+    fn device_numbers(device: u64) -> (u64, u64) {
+        (
+            ((device >> 8) & 0xfff) | ((device >> 32) & 0xffff_f000),
+            (device & 0xff) | ((device >> 12) & 0xffff_ff00),
+        )
+    }
+
+    #[cfg(target_os = "macos")]
+    fn device_numbers(device: u64) -> (u64, u64) {
+        ((device >> 24) & 0xff, device & 0x00ff_ffff)
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::fs;
+        use std::os::unix::fs::{FileTypeExt, MetadataExt, symlink};
+        use std::path::Path;
+        use std::sync::atomic::{AtomicU64, Ordering};
+
+        static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
+        const PORTS: [(&str, &str); 3] = [
+            ("hb.control", "null"),
+            ("hb.file", "zero"),
+            ("hb.inference", "random"),
+        ];
+
+        struct Fixture {
+            root: PathBuf,
+            links: PathBuf,
+            sysfs: PathBuf,
+        }
+
+        impl Fixture {
+            fn new() -> Self {
+                let root = std::env::temp_dir().join(format!(
+                    "havenbox-virtio-channel-{}-{}",
+                    std::process::id(),
+                    NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+                ));
+                let links = root.join("links");
+                let sysfs = root.join("sysfs");
+                fs::create_dir_all(&links).unwrap();
+                fs::create_dir_all(&sysfs).unwrap();
+                let fixture = Self { root, links, sysfs };
+                for (name, node) in PORTS {
+                    fixture.publish(name, node, name, None);
+                }
+                fixture
+            }
+
+            fn roots(&self) -> Roots {
+                Roots::fixture(&self.links, Path::new("/dev"), &self.sysfs, "")
+            }
+
+            fn publish(&self, name: &str, node: &str, registered_name: &str, dev: Option<&str>) {
+                let link = self.links.join(name);
+                let _ = fs::remove_file(&link);
+                symlink(Path::new("/dev").join(node), link).unwrap();
+                let port = self.sysfs.join(node);
+                fs::create_dir_all(&port).unwrap();
+                fs::write(port.join("name"), format!("{registered_name}\n")).unwrap();
+                let metadata = fs::metadata(Path::new("/dev").join(node)).unwrap();
+                let (major, minor) = device_numbers(metadata.rdev());
+                let registered_dev = dev
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| format!("{major}:{minor}"));
+                fs::write(port.join("dev"), format!("{registered_dev}\n")).unwrap();
+            }
+        }
+
+        impl Drop for Fixture {
+            fn drop(&mut self) {
+                let _ = fs::remove_dir_all(&self.root);
+            }
+        }
+
+        #[test]
+        fn waits_until_all_three_opened_devices_match_name_and_dev() {
+            let fixture = Fixture::new();
+            fixture.publish("hb.inference", "random", "hb.inference", Some("999:999"));
+            let mut pauses = 0;
+            let channels =
+                open_fixed_channels_with_pause(&fixture.roots(), 2, Duration::ZERO, |_| {
+                    pauses += 1;
+                    fixture.publish("hb.inference", "random", "hb.inference", None);
+                })
+                .unwrap();
+            assert_eq!(pauses, 1);
+            for file in [channels.control, channels.file, channels.inference] {
+                assert!(file.metadata().unwrap().file_type().is_char_device());
+            }
+        }
+
+        #[test]
+        fn rejects_wrong_name_wrong_dev_non_character_and_link_replacement() {
+            #[cfg(target_os = "linux")]
+            assert_eq!(device_numbers((253 << 8) | 17), (253, 17));
+            assert_eq!(parse_device("253:17"), Ok((253, 17)));
+            assert_eq!(parse_device("253"), Err(Error::Boundary));
+            assert_eq!(parse_device("0253:17"), Err(Error::Boundary));
+            let fixture = Fixture::new();
+            fixture.publish("hb.control", "null", "hb.wrong", None);
+            assert!(open_channel_at_with_hook(&fixture.roots(), "hb.control", || {}).is_err());
+
+            fixture.publish("hb.control", "null", "hb.control", Some("999:999"));
+            assert!(open_channel_at_with_hook(&fixture.roots(), "hb.control", || {}).is_err());
+
+            fixture.publish("hb.control", "null", "hb.control", None);
+            let link = fixture.links.join("hb.control");
+            assert!(
+                open_channel_at_with_hook(&fixture.roots(), "hb.control", || {
+                    fs::remove_file(&link).unwrap();
+                    symlink("/dev/zero", &link).unwrap();
+                })
+                .is_err()
+            );
+
+            let devices = fixture.root.join("devices");
+            fs::create_dir_all(&devices).unwrap();
+            fs::write(devices.join("vport0p1"), b"not a device").unwrap();
+            let roots = Roots::fixture(&fixture.links, &devices, &fixture.sysfs, "vport");
+            let link = fixture.links.join("hb.control");
+            fs::remove_file(&link).unwrap();
+            symlink(devices.join("vport0p1"), link).unwrap();
+            fs::create_dir_all(fixture.sysfs.join("vport0p1")).unwrap();
+            fs::write(fixture.sysfs.join("vport0p1/name"), "hb.control\n").unwrap();
+            fs::write(fixture.sysfs.join("vport0p1/dev"), "1:3\n").unwrap();
+            assert!(open_channel_at_with_hook(&roots, "hb.control", || {}).is_err());
+        }
+    }
+}
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
@@ -294,7 +626,7 @@ const BOOT_MOUNTS: &[(&str, &str, &str, &str, &str)] = &[
         "devtmpfs",
         "devtmpfs",
         "rw,nosuid,noexec,relatime",
-        "rw,size=2003720k,nr_inodes=500930,mode=755,inode64",
+        "rw,size=65536k,nr_inodes=16384,mode=755,inode64",
     ),
     (
         "/dev/pts",
@@ -560,6 +892,41 @@ mod tests {
         let mut extra = blocks.clone();
         extra.push(("vdc".into(), "254:32".into()));
         assert!(inspect_boot(&mounts, &lo, &extra).is_err());
+    }
+    #[test]
+    fn boot_accepts_only_the_frozen_devtmpfs_capacity() {
+        let mounts = concat!(
+            "1 0 253:0 / / ro,relatime - ext4 /dev/vda ro\n",
+            "2 1 253:16 / /data rw,nosuid,nodev,noexec,relatime - ext4 /dev/vdb rw,prjquota\n",
+            "3 1 0:3 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw\n",
+            "4 1 0:4 / /sys ro,nosuid,nodev,noexec,relatime - sysfs sysfs ro\n",
+            "5 1 0:5 / /dev rw,nosuid,noexec,relatime - devtmpfs devtmpfs rw,size=65536k,nr_inodes=16384,mode=755,inode64\n",
+            "6 5 0:6 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=000\n",
+            "7 4 0:7 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup rw\n",
+            "8 1 0:8 / /tmp rw,nosuid,nodev,noexec,relatime - tmpfs tmpfs rw,size=65536k,inode64"
+        );
+        let blocks = vec![
+            ("vda".into(), "253:0".into()),
+            ("vdb".into(), "253:16".into()),
+        ];
+        let lo = vec!["lo".into()];
+
+        inspect_boot(mounts, &lo, &blocks).unwrap();
+        for drifted in [
+            mounts.replace(
+                "devtmpfs devtmpfs rw,size=65536k",
+                "devtmpfs devtmpfs rw,size=65535k",
+            ),
+            mounts.replace(
+                "devtmpfs devtmpfs rw,size=65536k",
+                "devtmpfs devtmpfs rw,size=65537k",
+            ),
+            mounts.replace("nr_inodes=16384", "nr_inodes=16383"),
+            mounts.replace("nr_inodes=16384", "nr_inodes=16385"),
+            mounts.replace("mode=755,inode64", "mode=755,inode64,unexpected"),
+        ] {
+            assert_eq!(inspect_boot(&drifted, &lo, &blocks), Err(Error::Boundary));
+        }
     }
     #[test]
     fn unsupported_host_does_not_claim_isolation() {

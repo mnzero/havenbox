@@ -6,6 +6,7 @@ mod sha256;
 pub use channel::{
     Channel, ChannelQueue, Direction, Frame, FrameError, FrameReader, MessageKind, RequestRegistry,
 };
+pub use sha256::Sha256;
 
 pub const VERSION: u16 = 1;
 pub const HEADER_BYTES: usize = 68;

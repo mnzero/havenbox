@@ -45,6 +45,20 @@ fn main() -> std::process::ExitCode {
             Err(error) => unavailable(&format!("runtime failed: {error:?}")),
         };
     }
+    if args.len() == 3 && args[0] == "--run-files" {
+        let instance = match parse_instance(&args[1]) {
+            Some(value) => value,
+            None => return unavailable("invalid instance"),
+        };
+        let epoch = match args[2].parse::<u64>() {
+            Ok(value) if value > 0 => value,
+            _ => return unavailable("invalid epoch"),
+        };
+        return match hb_supervisor::file_runtime::run(instance, epoch) {
+            Ok(()) => std::process::ExitCode::SUCCESS,
+            Err(error) => unavailable(&format!("file runtime failed: {error:?}")),
+        };
+    }
     eprintln!(
         "Product supervision is not implemented: HB-11 candidate lacks validated image/transport/launchd integration; no process started."
     );

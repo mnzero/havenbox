@@ -4,6 +4,10 @@ use crate::{Error, policy::OutputQuotaLimit};
 
 pub(crate) const QUOTA_BLOCK_BYTES: u64 = 1_024;
 
+#[cfg(any(test, all(target_os = "linux", target_arch = "aarch64")))]
+pub(crate) const AARCH64_LINUX_DIRECTORY_OPEN_FLAGS: i32 =
+    crate::aarch64_linux_open_flags::DIRECTORY_OPEN_FLAGS;
+
 pub(crate) fn hard_blocks(limit: OutputQuotaLimit) -> Result<u64, Error> {
     if limit.project_id == 0
         || limit.allocated_bytes == 0
@@ -70,9 +74,6 @@ mod linux {
     const OUTPUT: &str = "/data/active/output";
     const DEVICE: &str = "/dev/vdb";
     const WORKER_UID: u32 = 10_002;
-    const O_DIRECTORY: c_int = 0x4000;
-    const O_NOFOLLOW: c_int = 0x20000;
-    const O_CLOEXEC: c_int = 0x80000;
     const FS_IOC_FSGETXATTR: c_ulong = 0x801c_581f;
     const FS_IOC_FSSETXATTR: c_ulong = 0x401c_5820;
     const FS_XFLAG_PROJINHERIT: u32 = 0x0000_0200;
@@ -135,7 +136,7 @@ mod linux {
         }
         let directory = std::fs::OpenOptions::new()
             .read(true)
-            .custom_flags(O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+            .custom_flags(AARCH64_LINUX_DIRECTORY_OPEN_FLAGS)
             .open(OUTPUT)
             .map_err(crate::io)?;
         let fd = directory.as_raw_fd();

@@ -48,7 +48,12 @@ pub enum MessageKind {
     Event,
     Stopped,
     ReadArtifact,
+    BeginInput,
     FileChunk,
+    CommitInput,
+    InputAccepted,
+    CommitArtifact,
+    ArtifactCommitted,
     InferenceRequest,
     InferenceResponse,
     Cancel,
@@ -65,7 +70,12 @@ impl MessageKind {
             "Event" => Ok(Self::Event),
             "Stopped" => Ok(Self::Stopped),
             "ReadArtifact" => Ok(Self::ReadArtifact),
+            "BeginInput" => Ok(Self::BeginInput),
             "FileChunk" => Ok(Self::FileChunk),
+            "CommitInput" => Ok(Self::CommitInput),
+            "InputAccepted" => Ok(Self::InputAccepted),
+            "CommitArtifact" => Ok(Self::CommitArtifact),
+            "ArtifactCommitted" => Ok(Self::ArtifactCommitted),
             "InferenceRequest" => Ok(Self::InferenceRequest),
             "InferenceResponse" => Ok(Self::InferenceResponse),
             "Cancel" => Ok(Self::Cancel),
@@ -85,14 +95,23 @@ impl MessageKind {
                 Channel::Control,
                 G,
                 Self::HelloAck | Self::Event | Self::Stopped
-            ) | (Channel::File, H, Self::ReadArtifact | Self::FileChunk)
-                | (Channel::File, G, Self::FileChunk)
-                | (
-                    Channel::Inference,
-                    H,
-                    Self::InferenceResponse | Self::Cancel
-                )
-                | (Channel::Inference, G, Self::InferenceRequest)
+            ) | (
+                Channel::File,
+                H,
+                Self::ReadArtifact
+                    | Self::BeginInput
+                    | Self::FileChunk
+                    | Self::CommitInput
+                    | Self::ArtifactCommitted
+            ) | (
+                Channel::File,
+                G,
+                Self::FileChunk | Self::InputAccepted | Self::CommitArtifact
+            ) | (
+                Channel::Inference,
+                H,
+                Self::InferenceResponse | Self::Cancel
+            ) | (Channel::Inference, G, Self::InferenceRequest)
         )
     }
 }
@@ -243,7 +262,8 @@ impl<R: Read> FrameReader<R> {
 }
 
 pub struct RequestRegistry {
-    local: HashSet<[u8; 16]>,
+    local_pending: HashSet<[u8; 16]>,
+    local_seen: HashSet<[u8; 16]>,
     remote: HashSet<[u8; 16]>,
     maximum: usize,
 }
@@ -254,19 +274,25 @@ impl RequestRegistry {
             return Err(FrameError::Backpressure);
         }
         Ok(Self {
-            local: HashSet::new(),
+            local_pending: HashSet::new(),
+            local_seen: HashSet::new(),
             remote: HashSet::new(),
             maximum,
         })
     }
 
     pub fn register_local(&mut self, request: [u8; 16]) -> Result<(), FrameError> {
-        if request == [0; 16] || self.local.len() >= self.maximum {
+        if request == [0; 16] {
             return Err(FrameError::Backpressure);
         }
-        if !self.local.insert(request) {
+        if self.local_seen.contains(&request) || self.remote.contains(&request) {
             return Err(FrameError::DuplicateRequest);
         }
+        if self.local_pending.len() >= self.maximum || self.local_seen.len() >= self.maximum {
+            return Err(FrameError::Backpressure);
+        }
+        self.local_seen.insert(request);
+        self.local_pending.insert(request);
         Ok(())
     }
 
@@ -277,10 +303,13 @@ impl RequestRegistry {
     ) -> Result<(), FrameError> {
         let request = frame.header.request;
         if responds_to_local {
-            if !self.local.remove(&request) {
+            if !self.local_pending.remove(&request) {
                 return Err(FrameError::UnknownRequest);
             }
         } else {
+            if self.local_seen.contains(&request) {
+                return Err(FrameError::DuplicateRequest);
+            }
             if self.remote.len() >= self.maximum {
                 return Err(FrameError::Backpressure);
             }
@@ -435,6 +464,10 @@ mod tests {
             registry.accept_remote(&reply, true),
             Err(FrameError::UnknownRequest)
         );
+        assert_eq!(
+            registry.register_local([1; 16]),
+            Err(FrameError::DuplicateRequest)
+        );
         let event = frame("Event", 2, Direction::GuestToHost);
         registry.accept_remote(&event, false).unwrap();
         assert_eq!(
@@ -444,6 +477,14 @@ mod tests {
         registry.complete_remote([2; 16]).unwrap();
         assert_eq!(
             registry.accept_remote(&event, false),
+            Err(FrameError::DuplicateRequest)
+        );
+
+        let mut registry = RequestRegistry::new(2).unwrap();
+        registry.register_local([3; 16]).unwrap();
+        let collision = frame("Event", 3, Direction::GuestToHost);
+        assert_eq!(
+            registry.accept_remote(&collision, false),
             Err(FrameError::DuplicateRequest)
         );
     }
@@ -473,5 +514,30 @@ mod tests {
         inference_queue.enqueue(inference).unwrap();
         assert!(inference_queue.dequeue().is_some());
         assert!(control_queue.dequeue().is_some());
+    }
+
+    #[test]
+    fn oversized_and_cross_epoch_frames_fail_before_payload_allocation() {
+        let frame = frame("Hello", 1, Direction::HostToGuest);
+        let mut oversized = frame.header.encode();
+        oversized[32..36].copy_from_slice(&65_537_u32.to_be_bytes());
+        let mut reader = FrameReader::new(
+            Cursor::new(oversized),
+            7,
+            Channel::Control,
+            Direction::HostToGuest,
+        );
+        assert_eq!(
+            reader.read(),
+            Err(FrameError::Header(HeaderError::PayloadLimit))
+        );
+
+        let mut reader = FrameReader::new(
+            Cursor::new(frame.bytes()),
+            8,
+            Channel::Control,
+            Direction::HostToGuest,
+        );
+        assert_eq!(reader.read(), Err(FrameError::Header(HeaderError::Epoch)));
     }
 }
