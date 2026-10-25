@@ -7,8 +7,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TASK_HEADER = re.compile(r'^### (HB-\d{2}) (.+)$', re.MULTILINE)
+TASK_HEADER = re.compile(r'^### (MVP-\d{2}) (.+)$', re.MULTILINE)
 REQUIREMENT = re.compile(r'\b[FS]\d{2}\b')
+
+
+def task_number(task_id: str) -> int:
+    return int(task_id.removeprefix('MVP-'))
 
 
 def field(body: str, label: str, task_id: str) -> str:
@@ -33,10 +37,10 @@ def check_plan(text: str, required: set[str]) -> tuple[dict, list[list[str]]]:
         if status not in {'未开始', '进行中', '受阻', '已完成'}:
             raise ValueError(f'{task_id}: unknown status {status}')
         dep_text = field(body, '依赖', task_id)
-        dependencies = set(re.findall(r'HB-\d{2}', dep_text))
+        dependencies = set(re.findall(r'MVP-\d{2}', dep_text))
         if dep_text != '无' and not dependencies:
             raise ValueError(f'{task_id}: invalid dependencies')
-        remainder = re.sub(r'HB-\d{2}|[、，,\s]', '', dep_text)
+        remainder = re.sub(r'MVP-\d{2}|[、，,\s]', '', dep_text)
         if dep_text != '无' and remainder:
             raise ValueError(f'{task_id}: malformed dependencies {dep_text}')
         requirements = set(REQUIREMENT.findall(field(body, '需求', task_id)))
@@ -75,8 +79,8 @@ def check_plan(text: str, required: set[str]) -> tuple[dict, list[list[str]]]:
         remaining.difference_update(ready)
     # Both implementation cards and final acceptance cards need requirement links.
     for label, subset in (
-        ('implementation', [t for t in tasks if 9 <= int(t[3:]) <= 30]),
-        ('acceptance', [t for t in tasks if int(t[3:]) >= 31]),
+        ('implementation', [t for t in tasks if 1 <= task_number(t) <= 6]),
+        ('acceptance', [t for t in tasks if 7 <= task_number(t) <= 8]),
     ):
         covered = set().union(*(tasks[t]['requirements'] for t in subset))
         if required - covered:
@@ -106,8 +110,10 @@ def main() -> None:
     plan_path = ROOT / 'doc/development-tasks.md'
     tasks, layers = check_plan(plan_path.read_text(), required)
     check_links([
-        ROOT / 'README.md', plan_path, ROOT / 'doc/technical-design.md',
-        ROOT / 'doc/technical-review.md',
+        ROOT / 'README.md', ROOT / 'doc/product-requirements.md', plan_path,
+        ROOT / 'doc/technical-design.md', ROOT / 'doc/technical-review.md',
+        ROOT / 'doc/ui-ux-design.md', ROOT / 'doc/build-dependencies.md',
+        ROOT / 'doc/research-report.md', ROOT / 'doc/prototypes/README.md',
     ])
     ready_now = sorted(
         task_id for task_id, task in tasks.items()
