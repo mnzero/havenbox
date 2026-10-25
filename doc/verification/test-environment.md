@@ -135,4 +135,3 @@ Kimi/dsh：操作者恢复已审核固定 runtime/hash 和访问权限，不能�
 首次 supervisor 构建未指定 SDKROOT，宿主默认 SDK 27.0 与链接器不兼容而退出 101；按固定 SDK 26.5 重跑成功，没有改工具链。首次宿主 Swift 构建在 Orca 的 x86_64 shell 下让通用 swiftc 进入 Rosetta，因 llbuild 仅 arm64 而 SIGABRT；最小复现 `swiftc --version` 连续三次退出 134，`arch -arm64 swiftc --version` 成功，之后以 `arch -arm64` 执行原构建链成功。这是宿主进程架构选择问题，不是 Swift 源码或 VM 缺陷。
 
 本轮完成的是 HB02/HB11 固定 synthetic candidate 的真实机制复验，不自动修改 HB 验收状态，也不覆盖普通用户入口、真实 harness/模型/MCP、Keychain 或精确 loopback sandbox；这些剩余边界继续按前文和 PRD 验收。
-
